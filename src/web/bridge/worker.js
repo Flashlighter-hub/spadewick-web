@@ -3,9 +3,29 @@
  */
 import { REMEMBERED_SETTINGS, SETTINGS_STORAGE_KEY } from '../config.js'
 
-const worker = new Worker(new URL('../worker/core.worker.js', import.meta.url), { type: 'module', name: 'spadewick-core' })
-
+let worker = null
+let started = false
 const pending = new Map()
+const pongs = new Map()           // ping id -> resolve
+let pingId = 1
+
+/** Errors seen in the page (and uncaught ones of the core), for Help → Copy Error Report (WEB-PRD Phase 10). */
+export const pageErrors = []
+const keepError = text => { pageErrors.push(`${new Date().toISOString()} ${text}`); if (pageErrors.length > 50) pageErrors.shift() }
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', e => keepError(`[page] ${e.error?.stack ?? e.message}`))
+  window.addEventListener('unhandledrejection', e => keepError(`[page] ${e.reason?.stack ?? e.reason}`))
+}
+
+/** Whether the core still answers, within `ms` (a long export can keep it busy for a while). */
+function stillAnswering(ms = 20000) {
+  const id = pingId++
+  return new Promise(resolve => {
+    const timer = setTimeout(() => { pongs.delete(id); resolve(false) }, ms)
+    pongs.set(id, () => { clearTimeout(timer); resolve(true) })
+    try { worker.postMessage({ type: 'ping', id }) } catch { clearTimeout(timer); resolve(false) }
+  })
+}
 const listeners = new Map()          // channel -> Set(fn(...args))
 let nextId = 1
 let failed = null
@@ -38,39 +58,74 @@ function remoteError(channel, error) {
   return err
 }
 
-export const whenReady = new Promise((resolve, reject) => {
-  worker.onmessage = event => {
-    const m = event.data
-    switch (m?.type) {
-      case 'result': {
-        const p = pending.get(m.id)
-        if (!p) return
-        pending.delete(m.id)
-        if (m.error) p.reject(remoteError(p.channel, m.error)); else p.resolve(m.value)
-        return
+/**
+ * Start the core worker; resolves with its channels when it is ready. Called once when the page loads, and again by
+ * `restart` after the worker stopped (WEB-PRD Phase 10).
+ */
+function start() {
+  started = false
+  worker = new Worker(new URL('../worker/core.worker.js', import.meta.url), { type: 'module', name: 'spadewick-core' })
+  const ready = new Promise((resolve, reject) => {
+    worker.onmessage = event => {
+      const m = event.data
+      switch (m?.type) {
+        case 'result': {
+          const p = pending.get(m.id)
+          if (!p) return
+          pending.delete(m.id)
+          if (m.error) p.reject(remoteError(p.channel, m.error)); else p.resolve(m.value)
+          return
+        }
+        case 'event': emit(m.channel, ...(m.args ?? [])); return
+        case 'remember': remember(m.key, m.value); return
+        case 'open-external': window.open(m.url, '_blank', 'noopener,noreferrer'); return
+        case 'notice': emit('web:notice', m); return
+        case 'project-state': emit('web:project-state', m.state); return
+        case 'pick': emit('web:pick', m); return
+        case 'download': emit('web:download', m); return
+        case 'ready': started = true; resolve(m.channels); return
+        case 'pong': pongs.get(m.id)?.(); pongs.delete(m.id); return
+        case 'fatal': stopped(m.error); reject(new Error(m.error.message)); return
       }
-      case 'event': emit(m.channel, ...(m.args ?? [])); return
-      case 'remember': remember(m.key, m.value); return
-      case 'open-external': window.open(m.url, '_blank', 'noopener,noreferrer'); return
-      case 'notice': emit('web:notice', m); return
-      case 'project-state': emit('web:project-state', m.state); return
-      case 'pick': emit('web:pick', m); return
-      case 'download': emit('web:download', m); return
-      case 'ready': resolve(m.channels); return
-      case 'fatal': failed = m.error; reject(new Error(m.error.message)); emit('web:fatal', m.error); return
     }
-  }
-  worker.onerror = event => {
-    failed = { name: 'Error', message: event.message || 'The core worker stopped' }
-    reject(new Error(failed.message))
-    emit('web:fatal', failed)
-    for (const [, p] of pending) p.reject(new Error(failed.message))
-    pending.clear()
-  }
-})
-whenReady.catch(() => { /* reported through 'web:fatal' */ })
+    worker.onerror = event => {
+      event.preventDefault?.()
+      const error = { name: 'Error', message: event.message || 'The core worker stopped' }
+      // before it is ready, the core could not start; afterwards an uncaught error stops it only if it no longer answers
+      if (!started) { stopped(error); reject(new Error(error.message)); return }
+      keepError(`[core] ${error.message}`)
+      stillAnswering().then(alive => { if (!alive) stopped(error) })
+    }
+  })
+  ready.catch(() => { /* reported through 'web:fatal' */ })
+  worker.postMessage({ type: 'init', settings: loadSettings() })
+  return ready
+}
 
-worker.postMessage({ type: 'init', settings: loadSettings() })
+/** The worker stopped: every waiting call fails, and the page is told ('web:fatal'). */
+function stopped(error) {
+  if (failed) return
+  failed = error
+  for (const [, p] of pending) p.reject(remoteError(p.channel, error))
+  pending.clear()
+  emit('web:fatal', error)
+}
+
+/** Resolves when the core is ready the first time (the loading screen waits for it). */
+export const whenReady = start()
+
+/**
+ * Start a new core worker after the old one stopped (WEB-PRD Phase 10). Everything the old one held is gone: the page
+ * brings back what it kept (the last imported or exported archive). Resolves when the new one is ready.
+ */
+export async function restart() {
+  try { worker?.terminate() } catch { /* already gone */ }
+  failed = null
+  await start()
+}
+
+/** Whether the core worker has stopped. */
+export const hasStopped = () => !!failed
 
 /** Call a channel of the core, like Electron's ipcRenderer.invoke. */
 export function invoke(channel, ...args) {

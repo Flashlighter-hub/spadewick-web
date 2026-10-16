@@ -34,7 +34,11 @@ if (missing.length) {
     if (key === 'notYet') toast(tr(what === 'open' ? 'web.notYetOpen' : what === 'save' ? 'web.notYetSave' : 'web.notYet'), 'info', 5000)
     else toast(what, 'error', 8000)
   })
-  on('web:fatal', error => showProblem('fatalTitle', 'fatalText', { message: error.message }, true))
+  // the core could not start: a page that says so; it stopped later: the crash dialog offers to start again (Phase 10)
+  let started = false
+  whenReady.then(() => { started = true }, () => {})
+  const { crashed } = await import('./ui/recovery.js')
+  on('web:fatal', error => (started ? crashed.set(error) : showProblem('fatalTitle', 'fatalText', { message: error.message }, true)))
 
   const { appTitle } = await import('./ui/menu.js')
   document.title = appTitle()

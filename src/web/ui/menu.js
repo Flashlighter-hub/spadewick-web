@@ -20,7 +20,7 @@
  *
  * Changed from the desktop: Open Project… is Import Project… (a .db file is imported the same way, so Open Project File
  * is gone), Export Project and Download Library are added, Duplicate Project is Export a Copy As…; removed are Recent
- * Projects, Reveal in Explorer, Open Logs Folder, Toggle Developer Tools and Reload (the browser has the last two, and
+ * Projects, Reveal in Explorer, Open Logs Folder (Help → Copy Error Report instead, Phase 10), Toggle Developer Tools and Reload (the browser has the last two, and
  * a reload ends the project). New Project is Alt+N: browsers keep Ctrl+N for a new window.
  */
 import { tr } from '../../shared/i18n.js'
@@ -105,7 +105,8 @@ export const MENU = [
       { label: () => tr('menu.guide'), channel: 'menu:guide' },
       { type: 'separator' },
       { label: () => tr('menu.aboutSpadewick'), channel: 'menu:about' },
-      { label: () => tr('menu.checkDatabaseIntegrity'), needs: 'project', channel: 'menu:db-integrity' }
+      { label: () => tr('menu.checkDatabaseIntegrity'), needs: 'project', channel: 'menu:db-integrity' },
+      { label: () => tr('web.menu.copyErrorReport'), action: async () => (await import('./recovery.js')).copyErrorReport() }
     ]
   }
 ]

@@ -7,6 +7,7 @@
  * Messages, page → worker:
  *   { type: 'init', settings }                     the remembered settings (WEB-PRD §5.3); must come first
  *   { type: 'invoke', id, channel, args }          a call of window.spadewick.*
+ *   { type: 'ping', id }                           are you still there? (after an uncaught error, Phase 10) → { type: 'pong', id }
  * worker → page:
  *   { type: 'ready', channels }                    the handlers are registered
  *   { type: 'fatal', error }                       the core could not start
@@ -44,7 +45,13 @@ self.onmessage = event => {
   if (message?.type === 'init') { start(message).catch(fail); return }
   if (message?.type === 'invoke') { if (ready) answer(message); else waiting.push(message) }
   if (message?.type === 'picked') dialogs?.answerPick(message)
+  if (message?.type === 'ping') post({ type: 'pong', id: message.id })
 }
+
+// an error nothing caught is kept for the error report (WEB-PRD Phase 10); the page then checks the core still answers
+self.addEventListener('unhandledrejection', event => keep('unhandled', event.reason))
+self.addEventListener('error', event => keep('uncaught', event.error ?? event.message))
+function keep(context, err) { import('../shims/log.js').then(({ logError }) => logError(context, err)).catch(() => {}) }
 
 function fail(err) {
   console.error('The core could not start', err)
@@ -72,6 +79,8 @@ async function start({ settings }) {
   const { registerWebExports } = await import('../files/exports.js')
   registerWebExports(dialogs)
   ipcMain.handle('web:put-files', async (_e, files) => dialogs.put(files))
+  const { recentErrors } = await import('../shims/log.js')
+  ipcMain.handle('web:error-report', async () => recentErrors())
   onProjectChange(change => post({ type: 'event', channel: 'project:changed', args: [change] }))
 
   ready = true

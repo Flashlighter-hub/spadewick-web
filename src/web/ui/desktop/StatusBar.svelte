@@ -28,7 +28,7 @@
 
   <span class="spacer" />
 
-  <span class="seg save-status" class:warn={s.open && s.dirty}>{state}</span>
+  <span class="seg save-status" class:warn={s.open && s.dirty} title={s.open ? tr('web.status.size', { mb: Math.max(0.1, Math.round((s.bytes ?? 0) / 104857.6) / 10) }) : ''}>{state}</span>
 </div>
 
 <style>

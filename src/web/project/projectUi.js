@@ -5,6 +5,7 @@
  *   webDialog      a store: which web dialog is open ('import' | 'export' | null)
  *   importProject  the Import dialog; resolves to the path of the project put into memory, or null
  *   exportProject  zip the open project and download it
+ *   lastArchive    the project as last imported or exported, for a restart after the core stopped (Phase 10)
  *   install()      put the web behaviour around the desktop's project calls, and the warning on leaving
  *
  * The desktop's own actions (src/renderer/src/stores/actions.js) still open, make and close projects; "Open Project…"
@@ -75,6 +76,7 @@ export async function bringIn(fileList) {
   let placed
   try { placed = await invoke('web:project-import', payload) } catch (err) { throw new Error(messageOf(err)) }
   tellLibrary(placed?.library)
+  if (placed?.path) keepArchive(placed.path, placed.name, payload, 'import')
   return placed
 }
 
@@ -90,6 +92,22 @@ function tellLibrary(lib) {
 }
 
 // ---------------------------------------------------------------------------
+// The last archive, kept for a restart (WEB-PRD Phase 10)
+// ---------------------------------------------------------------------------
+
+/**
+ * The project as it was last imported or exported: { path, name, payload, kind: 'import' | 'export', at }. If the core
+ * worker stops, a new one is started from it (what changed since is lost). Kept in the page's memory only, and only
+ * for the open project: another project, or none, forgets it.
+ */
+export const lastArchive = writable(null)
+
+function keepArchive(path, name, payload, kind) {
+  // an imported project is the open one only once it is opened (the state names it): until then another being open is no reason to forget it
+  lastArchive.set({ path, name, payload, kind, at: Date.now(), opened: kind === 'export' })
+}
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -101,6 +119,8 @@ export async function exportProject(options = { includeSnapshots: get(includeSna
   exporting = true
   try {
     const { fileName, bytes } = await invoke('web:project-export', options)
+    const { path, name } = get(projectState)
+    keepArchive(path, name, { kind: 'zip', name: fileName, bytes }, 'export')
     download(fileName, bytes, 'application/zip')
     toast(tr('web.project.exported', { file: fileName }), 'info', 5000)
     return fileName
@@ -139,7 +159,16 @@ export async function mayDiscard() {
 }
 
 export function install() {
-  on('web:project-state', s => projectState.set(s))
+  let warned = false
+  on('web:project-state', s => {
+    projectState.set(s)
+    const kept = get(lastArchive)
+    if (kept && s.path === kept.path && !kept.opened) lastArchive.set({ ...kept, opened: true })
+    else if (kept?.opened && kept.path !== s.path) lastArchive.set(null)
+    // a tab has only so much memory (WEB-PRD Phase 10): say so once when a project grows large
+    if (s.open && s.bytes > WARN_PROJECT_BYTES && !warned) { warned = true; toast(tr('web.memory.large', { mb: Math.round(s.bytes / 1048576) }), 'info', 10000) }
+    if (!s.open || s.bytes < WARN_PROJECT_BYTES * 0.9) warned = false
+  })
   invoke('web:project-state').then(s => projectState.set(s)).catch(() => {})
 
   const projects = window.spadewick.projects

@@ -8,6 +8,8 @@
   import ImportDialog from './ImportDialog.svelte'
   import ExportDialog from './ExportDialog.svelte'
   import PickDialog from './PickDialog.svelte'
+  import CrashDialog from './CrashDialog.svelte'
+  import { crashed } from './recovery.js'
   import { webDialog } from '../project/projectUi.js'
   import { pickRequest } from '../files/picker.js'
 </script>
@@ -16,3 +18,4 @@
 {#if $webDialog === 'import'}<ImportDialog />{/if}
 {#if $webDialog === 'export'}<ExportDialog />{/if}
 {#if $pickRequest}<PickDialog request={$pickRequest} />{/if}
+{#if $crashed}<CrashDialog error={$crashed} />{/if}

@@ -39,7 +39,28 @@ export const webStrings = {
     menu: {
       label: 'Application menu',
       exportProject: 'Export Project…',
-      downloadLibrary: 'Download Library'
+      downloadLibrary: 'Download Library',
+      copyErrorReport: 'Copy Error Report'
+    },
+    // when something goes wrong (Phase 10)
+    errors: {
+      copied: 'The error report is on the clipboard. Look it over before you send it: it can name your cards and files.',
+      downloaded: 'The browser would not use the clipboard, so the error report was downloaded as a text file. Look it over before you send it.'
+    },
+    crash: {
+      title: 'Spadewick stopped working in this tab',
+      text: 'The part of Spadewick that runs in the background stopped ({message}). What was in this tab is gone.',
+      fromExport: 'Spadewick can start again from your last export of “{name}” at {when}. Changes made after that are lost.',
+      fromImport: 'Spadewick can start again from “{name}” as you imported it at {when}. Changes made after that are lost.',
+      nothingKept: 'This project was never exported, so there is nothing to start again from. Reload the page to start afresh.',
+      restart: 'Start again from that file',
+      restarting: 'Starting again…',
+      download: 'Download that file',
+      reload: 'Reload the page',
+      report: 'Copy error report'
+    },
+    memory: {
+      large: 'This project now takes {mb} MB of the tab\'s memory. Export it often: a browser tab may run short of memory with a project this large.'
     },
     welcome: {
       drop: 'Or drop a .spadewick.zip, a project folder or a project.db anywhere on this page.',
@@ -52,7 +73,8 @@ export const webStrings = {
     },
     status: {
       notExported: 'Changes not exported yet',
-      exported: 'No unexported changes'
+      exported: 'No unexported changes',
+      size: 'The project takes {mb} MB of this tab\'s memory.'
     },
     preferences: {
       remembered: 'These preferences are remembered in this browser only, and hold nothing from your projects.',
@@ -129,6 +151,10 @@ export const webStrings = {
   },
   assetBrowser: {
     exportedToast: 'Downloaded {path}'
+  },
+  // sharing a table (WEB-PRD Phase 11): the helper is the one server outside this site the app may reach, and only when it is on
+  tableShare: {
+    helperNote: 'The helper only tells each player the address they have on the internet while connecting; it never sees the game. It is the only server outside this site that Spadewick ever contacts, and only while a player connects with it switched on.'
   },
   compare: {
     exported: 'Downloaded {path}'
