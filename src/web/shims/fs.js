@@ -6,7 +6,7 @@
  * merge from the desktop version that starts using a new function is noticed (WEB-PRD Phase 15).
  */
 import { Buffer } from 'buffer'
-import { fsError, lookup, parentOf, mkdirp, putFile, cloneNode, normalize, parts } from './memfs.js'
+import { fsError, lookup, parentOf, mkdirp, putFile, cloneNode, normalize, parts, flushLive, dropLive, moveLive } from './memfs.js'
 
 const encodingOf = options => (typeof options === 'string' ? options : options?.encoding ?? null)
 
@@ -52,6 +52,7 @@ export function existsSync(path) {
 
 export function statSync(path, options) {
   if (typeof path === 'number') return fstatSync(path)
+  flushLive(path)
   const node = lookup(path)
   if (!node) {
     if (options?.throwIfNoEntry === false) return undefined
@@ -64,6 +65,7 @@ export const lstatSync = statSync
 
 export function readFileSync(path, options) {
   if (typeof path === 'number') { const d = descriptor(path, 'read'); return asResult(d.data.subarray(0, d.length), encodingOf(options)) }
+  flushLive(path)
   return asResult(fileNode(path, 'open').data, encodingOf(options))
 }
 
@@ -87,6 +89,7 @@ export function appendFileSync(path, data, options) {
 }
 
 export function copyFileSync(src, dest) {
+  flushLive(src)
   putFile(dest, fileNode(src, 'copyfile').data.slice(), 'copyfile')
 }
 
@@ -96,6 +99,7 @@ export function unlinkSync(path) {
   if (!node) throw fsError('ENOENT', 'unlink', path)
   if (node.type === 'dir') throw fsError('EISDIR', 'unlink', path)
   dir.children.delete(name)
+  dropLive(path)
   dir.mtimeMs = Date.now()
 }
 
@@ -146,6 +150,7 @@ export function rmSync(path, options = {}) {
     throw err
   }
   dir.children.delete(name)
+  dropLive(path)
   dir.mtimeMs = Date.now()
 }
 
@@ -170,11 +175,14 @@ export function renameSync(from, to) {
     if (there.children.size) throw fsError('ENOTEMPTY', 'rename', to)
   } else if (there && node.type === 'dir') throw fsError('ENOTDIR', 'rename', to)
   src.dir.children.delete(src.name)
+  if (there) dropLive(to)
   dest.dir.children.set(dest.name, node)
+  moveLive(from, to)
   src.dir.mtimeMs = dest.dir.mtimeMs = Date.now()
 }
 
 export function cpSync(src, dest, options = {}) {
+  flushLive(src)
   const node = lookup(src)
   if (!node) throw fsError('ENOENT', 'cp', src)
   const filter = options.filter ?? (() => true)
@@ -216,6 +224,7 @@ function descriptor(fd, syscall) {
 
 export function openSync(path, flags = 'r') {
   const f = String(flags)
+  if (!f.startsWith('w')) flushLive(path)
   const node = lookup(path)
   if (node?.type === 'dir') throw fsError('EISDIR', 'open', path)
   if (f.startsWith('r') && !node) throw fsError('ENOENT', 'open', path)

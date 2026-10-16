@@ -40,8 +40,20 @@ describe('the core in the web version', () => {
     expect(await call('projects:list-recent')).toEqual([])
   })
 
+  it('creates a project in the in-memory file system, with its database (Phase 2)', async () => {
+    expect(await call('projects:create', { name: 'Game' })).toEqual({ path: '/projects/Game', name: 'Game' })
+    expect((await call('projects:get-meta')).meta.name).toBe('Game')
+    const set = await call('sets:create', { name: 'Base' })
+    expect((await call('sets:list')).map(s => s.name)).toContain('Base')
+    expect(set).toBeTruthy()
+  })
+
   it('says plainly what comes in a later phase', async () => {
-    await expect(call('projects:create', { name: 'Game' })).rejects.toThrow(/WEB-PRD Phase 2/)
+    const [set] = await call('sets:list')
+    const template = await call('templates:create', { name: 'Face', svgSource: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 350"><rect width="250" height="350" fill="#123"/></svg>' })
+    await call('sets:update', { id: set.id, defaultTemplateId: template.id })
+    const card = await call('cards:create', { setId: set.id })
+    await expect(call('templates:render', { cardId: card.id ?? card })).rejects.toThrow(/WEB-PRD Phase [56]/)
   })
 
   it('turns a file dialog into a notice until Phase 4 brings file pickers', async () => {

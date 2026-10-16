@@ -97,8 +97,64 @@ export function cloneNode(node) {
   return copy
 }
 
+// ---------------------------------------------------------------------------
+// Live files (WEB-PRD Phase 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * A file whose newest content is held somewhere else: an open database keeps its data in SQLite's memory and writes it
+ * into its file only when asked. Anything that reads the file (a snapshot zipping project.db, a copy of the project
+ * folder) first asks the holder to write it, so it always reads what the database holds now. Writes and deletes are
+ * the holder's business, as they are for an open database file on a disk.
+ *
+ *   setLive(path, flush)   flush(currentPath) writes the newest content (with putFile)
+ *   clearLive(path, flush) the holder is done (a closed database); only its own registration is removed
+ */
+const live = new Map()   // normalized path -> flush(path)
+
+const under = (path, folder) => path === folder || folder === '/' || path.startsWith(`${folder}/`)
+
+export function setLive(path, flush) { live.set(normalize(path), flush) }
+
+export function clearLive(path, flush) {
+  const p = normalize(path)
+  if (!flush || live.get(p) === flush) live.delete(p)
+}
+
+export const isLive = (path, flush) => live.get(normalize(path)) === flush
+
+/** Where the holder of `flush` writes now (after any moves), or null. */
+export function livePathOf(flush) {
+  for (const [file, f] of live) if (f === flush) return file
+  return null
+}
+
+/** Bring every live file at or below `path` up to date. */
+export function flushLive(path) {
+  if (!live.size) return
+  const p = normalize(path)
+  for (const [file, flush] of [...live]) if (under(file, p)) flush(file)
+}
+
+/** A live file at or below `path` was deleted: its holder no longer writes there (an unlinked database file). */
+export function dropLive(path) {
+  const p = normalize(path)
+  for (const file of [...live.keys()]) if (under(file, p)) live.delete(file)
+}
+
+/** A live file at or below `from` was moved: its holder writes to the new place. */
+export function moveLive(from, to) {
+  const a = normalize(from), b = normalize(to)
+  for (const [file, flush] of [...live]) {
+    if (!under(file, a)) continue
+    live.delete(file)
+    live.set(b + file.slice(a.length), flush)
+  }
+}
+
 /** Every file below `path` as [absolutePath, Uint8Array] (for zipping a folder or handing it to the page). */
 export function listFiles(path) {
+  flushLive(path)
   const start = lookup(path)
   const out = []
   const walk = (node, at) => {
@@ -115,6 +171,6 @@ export function usage(path = '/') {
 }
 
 /** Empty the whole file system (tests, and the worker's start). */
-export function reset() { root = newDir() }
+export function reset() { root = newDir(); live.clear() }
 
 export const rootNode = () => root

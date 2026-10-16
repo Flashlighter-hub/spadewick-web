@@ -8,12 +8,14 @@
     "dev": "vite -c vite.web.config.mjs",
     "build": "vite build -c vite.web.config.mjs",
     "preview": "vite preview -c vite.web.config.mjs",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "docs": "node scripts/docs.mjs"
+    "test": "vitest run --project unit --project web --project desktop-on-web",
+    "test:watch": "vitest --project unit --project web --project desktop-on-web",
+    "docs": "node scripts/docs.mjs",
+    "test:progress": "vitest run --project desktop-progress"
   },
   "dependencies": {
     "@noble/hashes": "^2.0.1",
+    "@sqlite.org/sqlite-wasm": "^3.53.4-build2",
     "bidi-js": "^1.1.0",
     "buffer": "^6.0.3",
     "fflate": "^0.8.2",

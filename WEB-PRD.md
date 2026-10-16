@@ -12,7 +12,8 @@ fixed for the code to run in a browser. The desktop repository (`Flashlighter-hu
 |---|---|---|
 | 0 Repository preparation | done | Electron, packaging, CLI, Windows CI and spikes removed; Linux CI `.github/workflows/web.yml`. `src/main/log.js` and `src/main/core/lock.js` are kept and replaced at build time (`src/web/build/webModules.mjs`) instead of deleted, which keeps upstream merges simpler. `@sqlite.org/sqlite-wasm` and `@resvg/resvg-wasm` are added in the phases that use them (2 and 5). |
 | 1 Runtime foundation | done | Worker, bridge (unchanged preload), shims for `fs` (in-memory), `path`, `os`, `url`, `crypto`, `zlib`, `child_process`, `electron`, settings store with remembered preferences. The application menu is now data in `src/web/ui/menu.js` (the menu bar that draws it is Phase 9). better-sqlite3, sharp and resvg are placeholders that say which phase brings them. |
-| 2–15 | not started | |
+| 2 Database | done | `better-sqlite3` is replaced by `src/web/shims/better-sqlite3.js` on the official SQLite WebAssembly build (`@sqlite.org/sqlite-wasm`), in memory. The database file in the in-memory file system is a "live file": anything that reads it (a snapshot, a copy of the folder) first gets the newest bytes, and closing writes them, so **no desktop file needed an edit** (`db.js`, `snapshotCore.js` and `projects.js` stay as they are; WAL settings and checkpoints simply apply to memory). Files written in WAL mode by the desktop app are read (their header is adjusted on load). The desktop's own integration tests run on the web versions: 8 files pass completely and are part of `npm test`; `npm run test:progress` runs all of them (445 of 809 pass; every failure waits for Phase 5 or 6, or uses the command line or log file the web version does not have). |
+| 3–15 | not started | |
 
 Known test changes: the unit tests that need the database, drawing or images, `tests/integration/` and `tests/e2e/` are
 not run until the phases that bring what they need (list in `vitest.config.mjs`). `tests/unit/tableLink.test.js` waited
@@ -292,14 +293,12 @@ Each step lists **Changes** (existing code that is modified), **Additions** (new
   `snapshotCore.writeSnapshot`, snapshot restore and compare (`core/snapshots.js`, `core/snapshotCompare.js`),
   `core/projects.js` duplicate, and the new *Export project* (Phase 3).
 
-**Changes (marked `// WEB:`)**
-- `src/main/db.js`
-  - line ~577: the code that picks the Electron prebuilt `better_sqlite3.node` must be skipped in the web build
-    (guard on `process.platform === 'web'`).
-  - lines 594–595: `journal_mode = WAL` is not available for an in-memory database; skip it on the web
-    (`foreign_keys = ON` stays).
-- `src/main/snapshotCore.js:28` and `src/main/core/projects.js:142`: `wal_checkpoint` becomes "flush the in-memory
-  database to MemFS" on the web (the shim's `pragma('wal_checkpoint…')` can do this, which avoids editing the callers).
+**Changes** — none to desktop files (decided while building Phase 2):
+- `src/main/db.js` picks the Electron build of better-sqlite3 only when `process.versions.electron` is set, which it is
+  not in the worker; `journal_mode = WAL` on an in-memory database answers `memory` and does no harm.
+- `wal_checkpoint` (`snapshotCore.js`, `projects.js` autosave) makes the shim write the database into its file.
+- Reading `project.db` as a file always gives the newest data, because MemFS asks the open database to write itself
+  first (a "live file"); so snapshots, duplicates and exports need no `flushProjectDb` calls.
 
 **Fixes**
 - After a snapshot restore replaces `project.db` in MemFS, the open in-memory database must be reopened from the new
@@ -338,6 +337,9 @@ Each step lists **Changes** (existing code that is modified), **Additions** (new
   whole archive sits in memory twice during export (files + zip). Add `zipToBytes(entries)` / `unzipBytes(bytes)`
   helpers in a new `src/web/project/zipMem.js` that reuse `crc32` and the header code, to halve peak memory.
 - `CompressionStream` is asynchronous; the core needs synchronous deflate, hence `fflate` in the `zlib` shim.
+- A project folder zipped while the desktop app still had it open can carry a `project.db-wal` file with changes not
+  yet in `project.db`. SQLite's in-memory store cannot replay it, so import refuses such a folder with a clear message:
+  close the project in the desktop app first (closing folds the WAL file into `project.db`).
 
 ### Phase 4 — Files in and out: dialogs, downloads, folders
 
@@ -693,7 +695,6 @@ grid, JPEG writer…), which do not touch native modules.
 ## 8. Consolidated list of edits to shared desktop files (all marked `// WEB:`)
 | File | Edit |
 |---|---|
-| `src/main/db.js` (~577, 594) | skip the Electron native-module path and WAL on the web |
 | `src/main/fontFiles.js` (~60) | bundled fonts at `/resources/fonts` on the web |
 | `src/main/safeRaster.js` | treat a WASM runtime error as a crash for the retry levels |
 | `src/main/ttsLinks.js` | accept `platform = 'web'` |

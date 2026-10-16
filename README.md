@@ -3,12 +3,12 @@
 The Spadewick card-game design tool, running entirely in a browser tab. It is the web version of the desktop app
 [Spadewick](https://github.com/Flashlighter-hub/spadewick). The plan for the move is [WEB-PRD.md](WEB-PRD.md).
 
-**Status: early work.** Phases 0 and 1 of the plan are done:
-- the desktop app's code runs in the browser;
-- its interface opens, and its background logic answers in a background thread of the tab.
+**Status: early work.** Phases 0 to 2 of the plan are done:
+- the desktop app's code runs in the browser: its interface in the page, its background logic in a background thread;
+- projects can be created and edited (sets, fields, cards, undo, snapshots), with the database held in memory.
 
-Projects cannot be created yet: that needs the database, which comes in Phase 2. Drawing cards, images, opening and
-saving files, and exports follow in later phases.
+Not yet: drawing cards and fonts (Phase 5), images (Phase 6), importing and exporting projects and files (Phases 3
+and 4), and the exports (Phase 7). Until Phase 3, a project lives only as long as the tab.
 
 ## How it keeps your work private
 
@@ -34,7 +34,8 @@ Then open the address it prints (http://localhost:5173). Use a current Chrome, E
 | Command | What it does |
 |---------|--------------|
 | `npm run dev` | Development server with live reload |
-| `npm test` | Unit tests, and the tests of the browser versions of Node's modules (see `tests/README.md`) |
+| `npm test` | Unit tests, the tests of the browser versions, and the desktop tests that already pass on them (see `tests/README.md`) |
+| `npm run test:progress` | Every desktop test that needs the browser versions, to see how many pass as the phases land |
 | `npm run build` | Builds the site into `out-web/` |
 | `npm run preview` | Serves the built site locally |
 | `npm run docs` | Rewrites `docs/svg-naming-guide.md` from the program's own text |
@@ -48,7 +49,7 @@ Then open the address it prints (http://localhost:5173). Use a current Chrome, E
   a stand-in for Electron (`src/web/bridge/`), so its calls go to the worker.
 - **Node and native modules:** what the desktop code imports from Node and from native packages is replaced by
   browser versions when the site is built (`src/web/shims/`, rules in `src/web/build/webModules.mjs`). Files are kept
-  in an in-memory file system.
+  in an in-memory file system; the project database is SQLite compiled to WebAssembly, held in memory.
 
 The rules that keep desktop updates mergeable are in WEB-PRD §4.
 

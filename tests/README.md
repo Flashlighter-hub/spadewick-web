@@ -1,14 +1,15 @@
 # Tests
 
-> **Web version (WEB-PRD Phase 12).** `npm test` runs two projects (`vitest.config.mjs`):
-> - **unit** — the desktop's unit tests that need nothing native.
-> - **web** — `tests/web/`: the browser versions of Node's modules (`src/web/shims/`), and desktop code running on top
->   of them (the zip code, and every IPC handler of the preload script).
+> **Web version (WEB-PRD Phase 12).** The tests run in four Vitest projects (`vitest.config.mjs`):
+> - **unit** — the desktop's unit tests that need nothing native, in Node.
+> - **web** — `tests/web/`: the browser versions of Node's modules and of better-sqlite3 (`src/web/shims/`), and desktop
+>   code running on top of them.
+> - **desktop-on-web** — the desktop's own integration tests that pass completely on the browser versions (in-memory
+>   files, SQLite WebAssembly). `tests/web/setup-desktop.js` copies the files they read into the in-memory file system.
+> - **desktop-progress** — every desktop test that needs the browser versions, run with `npm run test:progress`.
 >
-> Not run yet: the unit tests listed in `NEEDS_LATER_PHASES` (they need the database, drawing or images, which later
-> phases bring), `tests/integration/` (Phase 12, against the web versions), and `tests/e2e/`, whose harness drives the
-> desktop main process (replaced in Phase 12 by one that drives the built site). The rest of this file describes the
-> desktop setup these tests come from.
+> `npm test` runs the first three. `tests/e2e/` is not run: its harness drives the desktop main process and is replaced
+> in Phase 12 by one that drives the built site. The rest of this file describes the desktop setup these tests come from.
 
 Everything runs headless with `npm run test:all` (also run by CI on every push, see
 `.github/workflows/test.yml`).

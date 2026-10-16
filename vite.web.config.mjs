@@ -54,7 +54,7 @@ export default defineConfig({
     entries: ['index.html', 'worker/core.worker.js'],
     include: ['buffer', 'fflate', '@noble/hashes/legacy.js', '@noble/hashes/sha2.js', 'pdf-lib', 'bidi-js', 'linebreak', 'konva'],
     // WebAssembly packages find their .wasm next to themselves; pre-bundling would move them away from it
-    exclude: ['harfbuzzjs', 'lcms-wasm', 'wawoff2']
+    exclude: ['harfbuzzjs', 'lcms-wasm', 'wawoff2', '@sqlite.org/sqlite-wasm']
   },
   build: {
     outDir: here('./out-web'),

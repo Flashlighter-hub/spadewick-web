@@ -21,6 +21,7 @@ import './globals.js'
 import Store from '../shims/electron-store.js'
 import { connectPage, handlerOf, channels } from '../shims/electron.js'
 import { SETTINGS_DEFAULTS } from '../config.js'
+import { loadSqlite } from '../sqlite/engine.js'
 
 const post = message => self.postMessage(message)
 const waiting = []          // calls that arrived before the core was ready
@@ -41,10 +42,11 @@ async function start({ settings }) {
   connectPage(post)
   const store = new Store({ defaults: SETTINGS_DEFAULTS, saved: settings ?? {}, onRemember: (key, value) => post({ type: 'remember', key, value }) })
 
-  // the core is loaded only now, after globals.js has given it Buffer and process
+  // the core is loaded only now, after globals.js has given it Buffer and process; the database engine with it
   const [{ registerIpcHandlers }, { onProjectChange }] = await Promise.all([
     import('../../main/ipc/index.js'),
-    import('../../main/core/changes.js')
+    import('../../main/core/changes.js'),
+    loadSqlite()
   ])
   registerIpcHandlers(store)
   onProjectChange(change => post({ type: 'event', channel: 'project:changed', args: [change] }))
