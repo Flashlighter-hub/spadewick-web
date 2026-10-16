@@ -1,0 +1,36 @@
+name: Web
+
+# WEB-PRD Phase 0: the web version is tested and built on Linux; the site in out-web/ is what Cloudflare Pages serves.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests (unit, and the web versions of Node's modules)
+        run: npm test
+
+      - name: Build the site
+        run: npm run build
+
+      - name: Keep the built site
+        uses: actions/upload-artifact@v4
+        with:
+          name: out-web
+          path: out-web
+          retention-days: 7
