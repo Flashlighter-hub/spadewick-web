@@ -33,7 +33,11 @@ describe('web text', () => {
   it('replaces only desktop text that exists', () => {
     for (const [area, entries] of Object.entries(webStrings)) {
       if (area === 'web') continue
-      for (const key of Object.keys(entries)) expect(typeof strings[area]?.[key], `${area}.${key}`).toBe('string')
+      // the same kind of text: a string, or a function where the desktop text makes plurals
+      for (const [key, value] of Object.entries(entries)) {
+        expect(['string', 'function'], `${area}.${key}`).toContain(typeof strings[area]?.[key])
+        expect(typeof value, `${area}.${key}`).toBe(typeof strings[area][key])
+      }
     }
   })
 })

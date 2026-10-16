@@ -69,6 +69,8 @@ async function start({ settings }) {
   registerIpcHandlers(store)
   const { registerWebProject } = await import('../project/service.js')
   afterCall = registerWebProject(post)
+  const { registerWebExports } = await import('../files/exports.js')
+  registerWebExports(dialogs)
   ipcMain.handle('web:put-files', async (_e, files) => dialogs.put(files))
   onProjectChange(change => post({ type: 'event', channel: 'project:changed', args: [change] }))
 
@@ -92,7 +94,7 @@ async function answer({ id, channel, args }) {
     inFlight--
   }
   try {
-    if (PROJECT_CHANGES.has(channel)) dialogs.clearImports()
+    if (PROJECT_CHANGES.has(channel)) { dialogs.clearImports(); dialogs.clearExports() }
     // what the core saved goes to the person once nothing is still writing (a long export, while the page asks how far it is)
     if (inFlight === 0) dialogs.deliver()
   } catch (err) { console.error('downloads', err) }

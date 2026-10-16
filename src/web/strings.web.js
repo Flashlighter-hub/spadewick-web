@@ -86,6 +86,15 @@ export const webStrings = {
   },
   actions: {
     duplicated: 'Downloaded a copy: {path}'
+  },
+  // exports are downloaded (WEB-PRD Phase 7): no folder is chosen, and the saved object cannot link to files on this computer
+  exportDialog: {
+    export: 'Export and download',
+    exportedToast: ({ n, path }) => `Exported ${n} ${n === 1 ? 'card' : 'cards'}: downloading ${path}`,
+    imageLinksNamesHelp: 'The download holds the JSON and the sheet images; the JSON names the images. Tabletop Simulator reads the names as web addresses and reports a "WWW Image Error" until you replace each one with an address. Choose Steam Cloud to have Spadewick write the addresses in.',
+    imageLinksCloudHelp: 'The download holds the JSON and the sheet images. To play, upload the sheets to Steam Cloud in Tabletop Simulator, then paste the address of each below: Spadewick writes a second JSON (ending in _cloud), which is downloaded and loads for everyone. Delete the files in Cloud Manager when the playtest is over.',
+    cloudSteps: 'Upload the sheets: unzip the download, open Tabletop Simulator, choose Modding, Cloud Manager, Upload, and add the files listed below. Then copy the address Cloud Manager gives each file and paste it next to its name.',
+    cloudWritten: ({ n, file }) => `${n} ${n === 1 ? 'link' : 'links'} written to ${file}: downloading it`
   }
 }
 

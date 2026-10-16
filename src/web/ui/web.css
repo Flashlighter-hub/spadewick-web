@@ -6,3 +6,7 @@
 
 /* a file is being dragged over the page (files/dropZone.js) */
 body.web-dropping #app { outline: 3px dashed var(--color-accent); outline-offset: -6px; }
+
+/* exports are downloaded (WEB-PRD Phase 7): no output folder to choose, and no links to files on this computer */
+section:has(> .row > .dir-input + button) { display: none; }
+select[aria-describedby="tts-links-help"] option[value="local"] { display: none; }

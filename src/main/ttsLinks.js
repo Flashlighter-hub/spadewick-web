@@ -43,6 +43,7 @@ export function fileLink(absPath, platform = process.platform) {
  */
 export function ttsImageLink(mode, dir, name, platform = process.platform) {
   if (mode === 'names') return name
+  if (platform === 'web') return name   // WEB: an export is downloaded; no path on this computer to link to (WEB-PRD Phase 7)
   const abs = (platform === 'win32' ? win32 : posix).resolve(dir, name)
   return fileLink(abs, platform)
 }
