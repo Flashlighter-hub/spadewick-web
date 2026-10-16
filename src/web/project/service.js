@@ -20,6 +20,7 @@ import { extractZip, listZip, writeZip } from '../../main/zip.js'
 import { walk } from '../../main/snapshotCore.js'
 import { closeProjectDb } from '../../main/db.js'
 import { MAX_PROJECT_BYTES } from '../config.js'
+import { ARCHIVE_FOLDER, libraryEntries, mergeLibrary, pointProjectAtCopies, countLibrary, exportLibrary } from './library.js'
 
 const PROJECTS = '/projects'
 
@@ -60,13 +61,46 @@ export function nameInDatabase(dbFile) {
 
 /** Of the paths given (relative, '/'-separated), the folder that holds the project: the shallowest project.db. */
 function projectRoot(paths) {
-  const dbs = paths.filter(p => p === 'project.db' || p.endsWith('/project.db'))
+  const dbs = paths.filter(p => (p === 'project.db' || p.endsWith('/project.db')) && libraryOf(p) === null)
   if (!dbs.length) fail('noProject')
   const depth = p => p.split('/').length
   const shallowest = Math.min(...dbs.map(depth))
   const top = dbs.filter(p => depth(p) === shallowest)
   if (top.length > 1) fail('severalProjects')
   return top[0] === 'project.db' ? '' : top[0].slice(0, -'/project.db'.length)
+}
+
+/** Where the person's library is in an archive ('' or 'folder/'), when `path` is inside it; else null (WEB-PRD Phase 8). */
+function libraryOf(path) {
+  const i = path.split('/').indexOf(ARCHIVE_FOLDER)
+  return i < 0 || i > 1 ? null : path.split('/').slice(0, i).map(x => `${x}/`).join('')
+}
+
+/** The archive's library folder (at its top, or beside the project in the folder the person chose), or null. */
+function libraryFolder(paths) {
+  const at = paths.map(libraryOf).filter(x => x !== null)
+  return at.length ? `${[...at].sort((a, b) => a.length - b.length)[0]}${ARCHIVE_FOLDER}` : null
+}
+
+/**
+ * Bring in what was extracted to `x`: the library first (taken out, so it never ends up in the project folder), then
+ * the project, whose templates are pointed at the library items kept as copies. An archive with only a library is fine.
+ */
+function bringInExtracted(staging, x, paths, fallbackName) {
+  const libRel = libraryFolder(paths)
+  const lib = join(staging, 'library')
+  if (libRel) renameSync(join(x, libRel), lib)
+  const hasProject = paths.some(p => (p === 'project.db' || p.endsWith('/project.db')) && libraryOf(p) === null)
+  if (!hasProject) {
+    if (!libRel) fail('noProject')
+    const { renamed, ...summary } = mergeLibrary(lib, null)
+    return { path: null, name: null, library: summary }
+  }
+  const placed = settle(x, projectRoot(paths), fallbackName)
+  if (!libRel) return placed
+  const { renamed, ...summary } = mergeLibrary(lib, placed.name)
+  pointProjectAtCopies(join(placed.path, 'project.db'), renamed)
+  return { ...placed, library: summary }
 }
 
 /** Move the project found at `staging/rootRel` into /projects, and say where it is. */
@@ -86,6 +120,8 @@ function settle(staging, rootRel, fallbackName) {
  *   { kind: 'zip', name, bytes }           a zip: the project folder at the top, or project.db directly at the top
  *   { kind: 'files', files: [{ path, bytes }] }   the files of a folder the person chose (paths start with the folder's name)
  *   { kind: 'db', name, bytes }            a project.db alone (a project without pictures or fonts)
+ * Returns { path, name } of the project, and `library` ({ added, same, kept, skipped }) when the archive carried the
+ * person's library (Phase 8); `path` is null for an archive that holds only a library.
  */
 export function importProject(payload) {
   mkdirSync('/imports', { recursive: true })
@@ -100,22 +136,23 @@ export function importProject(payload) {
       writeFileSync(zip, payload.bytes)
       let entries
       try { entries = listZip(zip) } catch { fail('notAZip') }
-      const root = projectRoot(entries.map(e => e.name).filter(n => !n.endsWith('/')))
+      const paths = entries.map(e => e.name).filter(n => !n.endsWith('/'))
+      if (!libraryFolder(paths)) projectRoot(paths)          // refuse what is no project before extracting it
       extractZip(zip, join(staging, 'x'), { maxEntries: 200000, maxTotalBytes: MAX_PROJECT_BYTES })
       rmSync(zip, { force: true })
-      return settle(join(staging, 'x'), root, baseName)
+      return bringInExtracted(staging, join(staging, 'x'), paths, baseName)
     }
 
     if (payload.kind === 'files') {
       const paths = payload.files.map(f => String(f.path).replace(/\\/g, '/').replace(/^\/+/, ''))
       if (paths.some(p => p.split('/').includes('..'))) fail('noProject')
-      const root = projectRoot(paths)
+      if (!libraryFolder(paths)) projectRoot(paths)
       payload.files.forEach((f, i) => {
         const file = join(staging, 'x', paths[i])
         mkdirSync(dirname(file), { recursive: true })
         writeFileSync(file, f.bytes)
       })
-      return settle(join(staging, 'x'), root, baseName)
+      return bringInExtracted(staging, join(staging, 'x'), paths, baseName)
     }
 
     if (payload.kind === 'db') {
@@ -133,7 +170,7 @@ export function importProject(payload) {
  * The open project's folder as a zip: { fileName, bytes } (WEB-PRD §5.2). The zip's folder and file are named after the
  * project (`name`), not after its folder in memory, which may carry a number to keep two projects apart for a moment.
  */
-export function exportProject(projectDir, { includeSnapshots = true, name } = {}) {
+export function exportProject(projectDir, { includeSnapshots = true, includeLibrary = true, name } = {}) {
   const top = sanitize(name ?? basename(projectDir))
   const entries = walk(projectDir)                                  // reading project.db gets the database's newest bytes
     .filter(e => {
@@ -147,7 +184,8 @@ export function exportProject(projectDir, { includeSnapshots = true, name } = {}
   const dir = mkdtempSync('/downloads/project-')
   const zip = join(dir, 'project.zip')
   try {
-    writeZip(zip, entries)
+    // the person's library goes with every project (WEB-PRD Phase 8)
+    writeZip(zip, includeLibrary ? [...entries, ...libraryEntries(dir)] : entries)
     return { fileName: `${top}.spadewick.zip`, bytes: readFileSync(zip) }
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -195,7 +233,8 @@ export function registerWebProject(post) {
     dirty: !!current && (baseline === null || changeGeneration() !== baseline),
     exportedAt,
     importedAt,
-    bytes: current ? usage(current.path) : 0
+    bytes: current ? usage(current.path) : 0,
+    libraryItems: countLibrary()
   })
 
   // a project the person brought in has nothing to export until it changes; one made here has everything to export
@@ -232,6 +271,7 @@ export function registerWebProject(post) {
     return out
   })
   ipcMain.handle('web:project-state', async () => state())
+  ipcMain.handle('web:library-export', async () => exportLibrary())
 
   /** After every call: tell the page when the project's state changed (its name, whether it has unexported changes). */
   return function afterCall() {

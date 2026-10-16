@@ -1,7 +1,7 @@
 <script>
   import { onDestroy } from 'svelte'
   import { tr } from '../../shared/i18n.js'
-  import { projectState, webDialog, mayDiscard } from '../project/projectUi.js'
+  import { projectState, webDialog, mayDiscard, exportLibrary } from '../project/projectUi.js'
   import { newProject, openProject, closeProject } from '../../renderer/src/stores/actions.js'
 
   // the time since the last export, kept current
@@ -31,6 +31,7 @@
     <button on:click={() => openProject(null)} title={tr('web.bar.importHint')}>{tr('web.bar.import')}</button>
     <button on:click={() => webDialog.set('export')} disabled={!s.open} title={tr('web.bar.exportHint')}>{tr('web.bar.export')}</button>
     <button on:click={close} disabled={!s.open}>{tr('web.bar.close')}</button>
+    <button on:click={exportLibrary} disabled={!s.libraryItems} title={tr('web.bar.libraryHint')}>{tr('web.bar.library')}</button>
   </nav>
   <span class="status" class:warn={s.open && s.dirty} role="status" aria-live="polite" title={s.open && s.dirty ? tr('web.bar.dirtyHint') : ''}>{status}</span>
 </header>

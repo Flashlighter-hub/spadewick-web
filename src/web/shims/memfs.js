@@ -24,7 +24,8 @@ let root = newDir()
 
 let generation = 0
 export const changeGeneration = () => generation
-export function noteChange(path) { if (/^\/projects(\/|$)/.test(normalize(path))) generation++ }
+/** A change of the open project, or of the library, which travels with it (WEB-PRD Phase 8). */
+export function noteChange(path) { if (/^\/(projects|library)(\/|$)/.test(normalize(path))) generation++ }
 
 export function fsError(code, syscall, path) {
   const text = {

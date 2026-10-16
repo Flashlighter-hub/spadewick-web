@@ -57,7 +57,7 @@ async function onDrop(e) {
     if (!await mayDiscard()) return
     try {
       const placed = await bringIn(list)
-      if (placed) {
+      if (placed?.path) {          // an archive with only a library has no project to open (Phase 8)
         const { openProject } = await import('../../renderer/src/stores/actions.js')
         await openProject(placed.path)
       }

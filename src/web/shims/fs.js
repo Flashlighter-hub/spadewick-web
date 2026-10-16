@@ -300,6 +300,13 @@ export function writeSync(fd, data, a, b, c) {
   return bytes.byteLength
 }
 
+/** Set a file's times (only the modification time is kept). */
+export function utimesSync(path, atime, mtime) {
+  const node = lookup(path)
+  if (!node) throw fsError('ENOENT', 'utime', path)
+  node.mtimeMs = mtime instanceof Date ? mtime.getTime() : typeof mtime === 'number' && mtime < 1e11 ? mtime * 1000 : Number(mtime)
+}
+
 export const constants = { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1 }
 
 /** Copy a node (used by the worker to move a folder between places without going through bytes). */
@@ -307,5 +314,5 @@ export const _clone = cloneNode
 
 export default {
   existsSync, statSync, lstatSync, readFileSync, writeFileSync, appendFileSync, copyFileSync, unlinkSync, mkdirSync, readdirSync,
-  rmSync, rmdirSync, renameSync, cpSync, mkdtempSync, openSync, closeSync, fstatSync, readSync, writeSync, constants
+  rmSync, rmdirSync, renameSync, cpSync, mkdtempSync, openSync, closeSync, fstatSync, readSync, writeSync, utimesSync, constants
 }

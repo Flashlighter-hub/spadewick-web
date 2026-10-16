@@ -1,7 +1,7 @@
 /**
  * The project's life in the web version, page side (WEB-PRD §5, Phase 3).
  *
- *   projectState   a store: { open, name, dirty, exportedAt, bytes } from the core worker
+ *   projectState   a store: { open, name, dirty, exportedAt, bytes, libraryItems } from the core worker
  *   webDialog      a store: which web dialog is open ('import' | 'export' | null)
  *   importProject  the Import dialog; resolves to the path of the project put into memory, or null
  *   exportProject  zip the open project and download it
@@ -19,7 +19,7 @@ import { askConfirm } from '../../renderer/src/stores/prompt.js'
 import { toast } from '../../renderer/src/stores/ui.js'
 import { WARN_PROJECT_BYTES, MAX_PROJECT_BYTES } from '../config.js'
 
-export const projectState = writable({ open: false, name: null, dirty: false, exportedAt: null, bytes: 0 })
+export const projectState = writable({ open: false, name: null, dirty: false, exportedAt: null, bytes: 0, libraryItems: 0 })
 export const webDialog = writable(null)
 
 /** Snapshots go into an export unless the person says otherwise (owner's decision, WEB-PRD §14 Q3); kept for the tab. */
@@ -72,7 +72,21 @@ export async function bringIn(fileList) {
     const [{ file }] = items
     payload = { kind: /\.db$/i.test(file.name) ? 'db' : 'zip', name: file.name, bytes: await readBytes(file) }
   }
-  try { return await invoke('web:project-import', payload) } catch (err) { throw new Error(messageOf(err)) }
+  let placed
+  try { placed = await invoke('web:project-import', payload) } catch (err) { throw new Error(messageOf(err)) }
+  tellLibrary(placed?.library)
+  return placed
+}
+
+/** Say what an archive's library added to the tab's (WEB-PRD Phase 8); nothing when it brought nothing new. */
+function tellLibrary(lib) {
+  if (!lib) return
+  const parts = []
+  if (lib.added) parts.push(tr('web.library.added', { n: lib.added }))
+  if (lib.kept) parts.push(tr('web.library.kept', { n: lib.kept }))
+  if (lib.skipped) parts.push(tr('web.library.skipped', { n: lib.skipped }))
+  if (parts.length) toast(tr('web.library.merged', { what: parts.join('; ') }), 'info', 8000)
+  else if (lib.same) toast(tr('web.library.nothingNew'), 'info', 3000)
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +110,20 @@ export async function exportProject(options = { includeSnapshots: get(includeSna
   } finally {
     exporting = false
     projectState.set(await invoke('web:project-state'))
+  }
+}
+
+/** Download the library alone (WEB-PRD Phase 8): it goes with every project export too. */
+export async function exportLibrary() {
+  try {
+    const out = await invoke('web:library-export')
+    if (!out) { toast(tr('web.library.empty'), 'info', 4000); return null }
+    download(out.fileName, out.bytes, 'application/zip')
+    toast(tr('web.library.downloaded', { file: out.fileName }), 'info', 5000)
+    return out.fileName
+  } catch (err) {
+    toast(messageOf(err), 'error', 8000)
+    return null
   }
 }
 

@@ -18,6 +18,7 @@
   <form on:submit|preventDefault={go}>
     <p>{tr('web.export.intro', { name: $projectState.name ?? '' })}</p>
     <label class="check"><input type="checkbox" bind:checked={$includeSnapshots} /> {tr('web.export.snapshots')}</label>
+    {#if $projectState.libraryItems}<p class="dim">{tr('web.library.inExport', { n: $projectState.libraryItems })}</p>{/if}
     <p class="dim">{tr('web.export.size', { mb: sizeMb($projectState.bytes) })} {tr('web.export.shortcut')}</p>
     <div class="actions">
       <button type="button" on:click={() => webDialog.set(null)} disabled={busy}>{tr('common.cancel')}</button>

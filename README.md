@@ -3,7 +3,7 @@
 The Spadewick card-game design tool, running entirely in a browser tab. It is the web version of the desktop app
 [Spadewick](https://github.com/Flashlighter-hub/spadewick). The plan for the move is [WEB-PRD.md](WEB-PRD.md).
 
-**Status: early work.** Phases 0 to 7 of the plan are done:
+**Status: early work.** Phases 0 to 8 of the plan are done:
 - the desktop app's code runs in the browser: its interface in the page, its background logic in a background thread;
 - projects can be created and edited (sets, fields, cards, undo, snapshots), with the database held in memory;
 - projects are imported from and exported to your computer (the bar above the app, Ctrl+O and Ctrl+S, or drop one on
@@ -12,10 +12,11 @@ The Spadewick card-game design tool, running entirely in a browser tab. It is th
 - cards are drawn in the browser, with the bundled fonts (each downloaded only when a design uses it);
 - pictures work: importing them (PNG, JPEG, WebP, SVG), thumbnails, pictures on cards, print checks and proofs;
 - the Export dialog downloads what it makes: Tabletop Simulator decks (with Steam Cloud links), print-and-play and
-  production PDFs, PNG sheets and card images.
+  production PDFs, PNG sheets and card images;
+- your own templates, presets and components travel inside every exported project, and are merged into the library of
+  the tab that imports it (*Library* in the bar downloads them alone).
 
-Not yet: the full menu bar (Phase 9; the Export dialog has no menu to open it from until then), and the user's library
-travelling in project archives (Phase 8).
+Not yet: the full menu bar (Phase 9; the Export dialog has no menu to open it from until then).
 
 ## How it keeps your work private
 
@@ -24,7 +25,8 @@ travelling in project archives (Phase 8).
   the tab. To keep it, export it (Ctrl+S): you get one `.spadewick.zip` file, which you import again next time. The
   browser asks before you close a tab with changes you have not exported.
 - **Desktop projects work too.** Import a project folder from the desktop app (close it there first), or a zip of it.
-  Unzip an exported `.spadewick.zip` and the desktop app opens the folder inside.
+  Unzip an exported `.spadewick.zip` and the desktop app opens the folder inside. Its `spadewick-library` folder holds
+  your own templates, presets and components; the desktop app does not read it.
 - **Interface preferences are remembered** between visits in the browser: theme, panel sizes, export options. They
   contain nothing from your projects. The list is `REMEMBERED_SETTINGS` in `src/web/config.js`.
 

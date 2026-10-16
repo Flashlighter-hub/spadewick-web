@@ -28,6 +28,8 @@ export const webStrings = {
       importHint: 'Open a project from your computer: a .spadewick.zip, a zipped project folder, a project folder or a project.db (Ctrl+O)',
       export: 'Export',
       exportHint: 'Download the project as a .spadewick.zip (Ctrl+S)',
+      library: 'Library',
+      libraryHint: 'Download your templates, presets and components of your own, with no project. Every project export carries them too.',
       close: 'Close',
       noProject: 'No project open. Nothing is stored on this computer or on a server.',
       notExported: 'Not exported yet: this project exists only in this tab',
@@ -44,7 +46,7 @@ export const webStrings = {
       intro: 'Choose a project on your computer.',
       chooseFile: 'Choose a file…',
       chooseFolder: 'Choose a project folder…',
-      drop: 'Or drop a .spadewick.zip, a zipped project folder or a project.db here.',
+      drop: 'Or drop a .spadewick.zip, a zipped project folder, a project.db or a downloaded library here.',
       reading: 'Reading the project…',
       privacy: 'The project is read in this tab and never uploaded.',
       desktopHint: 'A project from the desktop app: close it there first, then choose its folder or a zip of it.'
@@ -65,6 +67,17 @@ export const webStrings = {
       openFirst: 'Open or create a project first, then drop the pictures on it.',
       added: ({ n }) => `Added ${n} ${n === 1 ? 'picture' : 'pictures'} to the project's assets.`,
       unknown: 'Drop a project (.spadewick.zip, a project folder or project.db) or pictures (PNG, JPEG, WebP, SVG).'
+    },
+    // the person's library travels with projects (WEB-PRD Phase 8)
+    library: {
+      merged: 'Your library: {what}.',
+      added: ({ n }) => `${n} ${n === 1 ? 'item' : 'items'} added`,
+      kept: ({ n }) => `${n} ${n === 1 ? 'item was' : 'items were'} different here and in the file: both versions kept, the older one as a copy`,
+      skipped: ({ n }) => `${n} damaged ${n === 1 ? 'item' : 'items'} left out`,
+      nothingNew: 'Your library already had everything in this file.',
+      empty: 'Your library has no templates, presets or components of your own yet.',
+      downloaded: 'Downloaded {file}. Import it in another tab to bring your library there.',
+      inExport: ({ n }) => `Your library (${n} ${n === 1 ? 'item' : 'items'}: templates, presets and components of your own) goes with it.`
     },
     export: {
       title: 'Export the project',

@@ -28,8 +28,11 @@ export const REMEMBERED_SETTINGS = [
 /** The localStorage key that holds them. */
 export const SETTINGS_STORAGE_KEY = 'spadewick.settings'
 
-/** The folders of the in-memory file system (WEB-PRD §5.1, Phase 4). */
-export const FOLDERS = ['/projects', '/tmp', '/imports', '/downloads', '/library', '/resources']
+/**
+ * The folders of the in-memory file system (WEB-PRD §5.1, Phase 4). The library's are made at the start, so that the
+ * first look at one of its lists is not counted as a change (Phase 8).
+ */
+export const FOLDERS = ['/projects', '/tmp', '/imports', '/downloads', '/library', '/library/mine', '/library/presets', '/library/components', '/resources']
 
 /** Project size limits in bytes (WEB-PRD §5.2). */
 export const WARN_PROJECT_BYTES = 500 * 1024 * 1024
