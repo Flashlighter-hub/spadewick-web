@@ -3,9 +3,10 @@
  *
  * The desktop hands resvg its fonts as file paths (`font.fontFiles`); the WebAssembly build takes their bytes
  * (`font.fontBuffers`), so the paths are read from the in-memory file system here (and kept, since the same fonts are
- * given for every card).
+ * given for every card). And its PNG is a Buffer, as resvg-js gives it.
  */
 import { Resvg as WasmResvg } from '@resvg/resvg-wasm'
+import { Buffer } from 'buffer'
 import { readFileSync, statSync } from 'fs'
 
 const fonts = new Map()   // path -> { mtimeMs, bytes }
@@ -31,6 +32,14 @@ export function wasmOptions(options) {
 export class Resvg extends WasmResvg {
   constructor(svg, options) {
     super(svg, wasmOptions(options))
+  }
+
+  /** As resvg-js: asPng() gives a Buffer (the desktop code calls .toString('base64') on it), not a bare Uint8Array. */
+  render() {
+    const image = super.render()
+    const asPng = image.asPng.bind(image)
+    image.asPng = () => { const b = asPng(); return Buffer.from(b.buffer, b.byteOffset, b.byteLength) }
+    return image
   }
 }
 

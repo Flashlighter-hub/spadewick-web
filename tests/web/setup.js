@@ -5,6 +5,7 @@ import { beforeAll } from 'vitest'
 import { createRequire } from 'module'
 import { loadSqlite } from '../../src/web/sqlite/engine.js'
 import { loadResvg } from '../../src/web/raster/resvg.js'
+import { initWebp } from '../../src/web/image/codecs.js'
 import { mkdirp, mountLazy } from '../../src/web/shims/memfs.js'
 import { FOLDERS } from '../../src/web/config.js'
 
@@ -29,5 +30,12 @@ process.resourcesPath = '/resources'
 beforeAll(async () => {
   await loadSqlite()
   await loadResvg(nodeFs.readFileSync(require.resolve('@resvg/resvg-wasm/index_bg.wasm')))
+  // the WebP codec finds its WebAssembly by address in a browser; in Node it is handed the compiled modules
+  const webp = nodePath.dirname(require.resolve('@jsquash/webp/package.json'))
+  const { simd } = await import('wasm-feature-detect')
+  await initWebp({
+    decoder: await WebAssembly.compile(nodeFs.readFileSync(nodePath.join(webp, 'codec/dec/webp_dec.wasm'))),
+    encoder: await WebAssembly.compile(nodeFs.readFileSync(nodePath.join(webp, (await simd()) ? 'codec/enc/webp_enc_simd.wasm' : 'codec/enc/webp_enc.wasm')))
+  })
   for (const folder of FOLDERS) mkdirp(folder)
 })

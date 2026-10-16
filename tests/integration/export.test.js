@@ -29,7 +29,7 @@ function linkToPath(link) {
   const m = /^file:(?:\/\/\/(?=[A-Za-z]:)|\/\/)(.*)$/.exec(link)
   expect(m, `not a file link: ${link}`).toBeTruthy()
   const path = m[1].replace(/%3F/g, '?').replace(/%23/g, '#').replace(/%25/g, '%')
-  return process.platform === 'win32' ? path.replace(/\//g, '\\') : `/${path}`
+  return process.platform === 'win32' ? path.replace(/\//g, '\\') : path   // WEB: on Linux and macOS the path already starts with /; the desktop's CI ran on Windows only
 }
 
 describe('TTS image links (PRD §10.2.1)', () => {

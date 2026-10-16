@@ -10,7 +10,7 @@ import sharp from 'sharp'
 import { PDFDocument } from 'pdf-lib'
 import { createTestProject, seedSet, invoke, mockDialog } from '../helpers/project.js'
 import { openProjectDb } from '../../src/main/db.js'
-import { runCli } from '../../src/cli/run.js'
+// WEB: the command line is loaded by the one test that uses it (the web version has none), so the others still run
 
 let ctx, out
 beforeEach(async () => { ctx = await createTestProject(); out = mkdtempSync(join(tmpdir(), 'backs-out-')) })
@@ -298,6 +298,7 @@ describe('comparing with a snapshot, and the command line', () => {
 
   it('render --side back writes the back; a card with no back is a usage error', async () => {
     const s = await deck()
+    const { runCli } = await import('../../src/cli/run.js')   // WEB: see the import list
     const run = async args => { let stdout = '', stderr = ''; const code = await runCli(['--project', ctx.dir, ...args], { stdout: t => { stdout += t }, stderr: t => { stderr += t }, cwd: out, env: {} }); return { code, stdout, stderr } }
     const none = await run(['render', '--card', 'Fire', '--side', 'back', '--out', join(out, 'b.png')])
     expect(none.code).toBe(2)

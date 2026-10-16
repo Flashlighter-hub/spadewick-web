@@ -6,34 +6,23 @@ import { webModules, webAliases } from './src/web/build/webModules.mjs'
  * The tests of the web version (WEB-PRD Phase 12), in four Vitest projects:
  *   unit              the desktop's unit tests that need nothing native, in Node as before
  *   web               tests/web/: the browser versions of Node's modules (src/web/shims/), and desktop code running on them
- *   desktop-on-web    the desktop's own tests that pass completely on the web versions (in-memory files, SQLite WebAssembly)
- *   desktop-progress  every desktop test that needs the web versions, to follow how many pass as the phases land
+ *   desktop-on-web    every desktop test that needs something native on the desktop (database, drawing, images), run on
+ *                     the web versions (in-memory files, SQLite, resvg and libwebp in WebAssembly, the JavaScript image
+ *                     library), except the tests of what the web version does not have (WEB_LACKS)
+ *   desktop-progress  the same, all of them
  * `npm test` runs the first three; `npm run test:progress` the last.
  *
- * On 2026-10-16 (Phase 5) desktop-progress passes 594 of 809 tests. Each failing one waits for images (Phase 6), or
- * needs what the web version does not have: the command line (cardBacks, one test of balanceViews) or a log file (renderContextLog; the web version logs to the console, Phase 10).
+ * On 2026-10-16 (Phase 6) desktop-progress passes every test but the three in WEB_LACKS.
  * tests/e2e/ is not run: its harness drives the desktop main process, and is replaced in Phase 12.
  */
-const DESKTOP_ON_WEB = [
-  'tests/unit/cardSizes.test.js',
-  'tests/unit/exportHelpers.test.js',
-  'tests/unit/legacyPalette.test.js',
-  'tests/unit/production.test.js',
-  'tests/unit/richLayout.test.js',
-  'tests/unit/textControls.test.js',
-  'tests/unit/textEngine.test.js',
-  'tests/integration/bundledFonts.test.js',
-  'tests/integration/cardSizeModel.test.js',
-  'tests/integration/displayName.test.js',
-  'tests/integration/findReplace.test.js',
-  'tests/integration/projectChanges.test.js',
-  'tests/integration/projects.test.js',
-  'tests/integration/setsFieldsCards.test.js',
-  'tests/integration/tables.test.js',
-  'tests/integration/templateCanvasLock.test.js',
-  'tests/integration/textCheck.test.js',
-  'tests/integration/textEngine.test.js'
+
+/** Desktop tests of what the web version does not have: the command line, and a log file (it logs to the console). */
+const WEB_LACKS = [
+  'the command line reads',                                        // balanceViews.test.js
+  'render --side back writes the back',                            // cardBacks.test.js
+  'names the card, the template, the text elements and the fonts'  // renderContextLog.test.js
 ]
+const withoutLacks = new RegExp(`^(?!.*(?:${WEB_LACKS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')}))`)
 
 /** Every desktop test that needs the database, drawing or images (anything native on the desktop). */
 const DESKTOP_ALL = [
@@ -52,10 +41,12 @@ const shared = { pool: 'forks', testTimeout: 30000, hookTimeout: 30000, environm
 
 const ELECTRON_MOCK = fileURLToPath(new URL('./tests/helpers/electron-mock.js', import.meta.url))
 
-const desktopOnWeb = (name, include) => ({
-  plugins: [webModules({ electron: ELECTRON_MOCK })],
-  resolve: { alias: webAliases },
-  test: { ...shared, name, include, setupFiles: ['tests/web/setup.js', 'tests/web/setup-desktop.js'] }
+const TEST_CHILD_PROCESS = fileURLToPath(new URL('./tests/web/child_process.js', import.meta.url))
+
+const desktopOnWeb = (name, extra = {}) => ({
+  plugins: [webModules({ electron: ELECTRON_MOCK, childProcess: TEST_CHILD_PROCESS })],
+  resolve: { alias: [...webAliases.filter(a => !a.find.test('child_process')), { find: /^(node:)?child_process$/, replacement: TEST_CHILD_PROCESS }] },
+  test: { ...shared, name, include: DESKTOP_ALL, setupFiles: ['tests/web/setup.js', 'tests/web/setup-desktop.js'], ...extra }
 })
 
 export default defineConfig({
@@ -70,8 +61,8 @@ export default defineConfig({
         resolve: { alias: webAliases },
         test: { ...shared, name: 'web', include: ['tests/web/**/*.test.js'], setupFiles: ['tests/web/setup.js'] }
       },
-      desktopOnWeb('desktop-on-web', DESKTOP_ON_WEB),
-      desktopOnWeb('desktop-progress', DESKTOP_ALL)
+      desktopOnWeb('desktop-on-web', { testNamePattern: withoutLacks }),
+      desktopOnWeb('desktop-progress')
     ]
   }
 })

@@ -4,9 +4,11 @@
 > - **unit** — the desktop's unit tests that need nothing native, in Node.
 > - **web** — `tests/web/`: the browser versions of Node's modules and of better-sqlite3 (`src/web/shims/`), and desktop
 >   code running on top of them.
-> - **desktop-on-web** — the desktop's own integration tests that pass completely on the browser versions (in-memory
->   files, SQLite WebAssembly). `tests/web/setup-desktop.js` copies the files they read into the in-memory file system.
-> - **desktop-progress** — every desktop test that needs the browser versions, run with `npm run test:progress`.
+> - **desktop-on-web** — every desktop test that needs something native on the desktop, run on the browser versions
+>   (in-memory files, SQLite, resvg and libwebp in WebAssembly, the JavaScript image library), except three tests of
+>   what the web version does not have (`WEB_LACKS`). `tests/web/setup-desktop.js` copies the files they read into the
+>   in-memory file system; `tests/web/child_process.js` lets them run pdftoppm and unzip on what the app wrote.
+> - **desktop-progress** — the same, including those three, with `npm run test:progress`.
 >
 > `npm test` runs the first three. `tests/e2e/` is not run: its harness drives the desktop main process and is replaced
 > in Phase 12 by one that drives the built site. The rest of this file describes the desktop setup these tests come from.

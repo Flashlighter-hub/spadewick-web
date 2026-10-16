@@ -3,16 +3,17 @@
 The Spadewick card-game design tool, running entirely in a browser tab. It is the web version of the desktop app
 [Spadewick](https://github.com/Flashlighter-hub/spadewick). The plan for the move is [WEB-PRD.md](WEB-PRD.md).
 
-**Status: early work.** Phases 0 to 5 of the plan are done:
+**Status: early work.** Phases 0 to 6 of the plan are done:
 - the desktop app's code runs in the browser: its interface in the page, its background logic in a background thread;
 - projects can be created and edited (sets, fields, cards, undo, snapshots), with the database held in memory;
 - projects are imported from and exported to your computer (the bar above the app, Ctrl+O and Ctrl+S, or drop one on
   the page);
 - the app's own file dialogs work: choosing files opens the browser's picker, and what the app saves is downloaded;
-- cards are drawn in the browser, with the bundled fonts (each downloaded only when a design uses it).
+- cards are drawn in the browser, with the bundled fonts (each downloaded only when a design uses it);
+- pictures work: importing them (PNG, JPEG, WebP, SVG), thumbnails, pictures on cards, print checks and proofs.
 
-Not yet: images (Phase 6: pictures on cards, asset import, thumbnails), and the exports to Tabletop Simulator, PDF
-and PNG (Phase 7).
+Not yet: the export dialog downloading its Tabletop Simulator, PDF and PNG files (Phase 7), and the full menu bar
+(Phase 9).
 
 ## How it keeps your work private
 
@@ -41,8 +42,8 @@ Then open the address it prints (http://localhost:5173). Use a current Chrome, E
 | Command | What it does |
 |---------|--------------|
 | `npm run dev` | Development server with live reload |
-| `npm test` | Unit tests, the tests of the browser versions, and the desktop tests that already pass on them (see `tests/README.md`) |
-| `npm run test:progress` | Every desktop test that needs the browser versions, to see how many pass as the phases land |
+| `npm test` | The desktop's tests (on the browser versions where they need something native) and the web version's own (see `tests/README.md`) |
+| `npm run test:progress` | The same desktop tests, including the three of what the web version does not have |
 | `npm run build` | Builds the site into `out-web/` |
 | `npm run preview` | Serves the built site locally |
 | `npm run docs` | Rewrites `docs/svg-naming-guide.md` from the program's own text |

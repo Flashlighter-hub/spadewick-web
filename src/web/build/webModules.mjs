@@ -35,9 +35,10 @@ const PRELOAD = here('./src/preload/index.js')
 /**
  * `electron` means two things: in the page (only the preload script imports it) the bridge to the worker; everywhere else
  * (the worker) the stand-in for the main process. Desktop files listed in FILES are swapped after they are resolved.
- * `electron` (option) replaces the worker's stand-in: the desktop tests bring their own (tests/helpers/electron-mock.js).
+ * `electron` and `childProcess` (options) replace the worker's versions: the desktop tests bring their own
+ * (tests/helpers/electron-mock.js, tests/web/child_process.js).
  */
-export function webModules({ electron } = {}) {
+export function webModules({ electron, childProcess } = {}) {
   return {
     name: 'spadewick-web-modules',
     enforce: 'pre',
@@ -47,6 +48,7 @@ export function webModules({ electron } = {}) {
         if (importer && normalize(importer.split('?')[0]) === PRELOAD) return here('./src/web/bridge/electron-renderer.js')
         return electron ?? shim('electron.js')
       }
+      if (bare === 'child_process' && childProcess) return childProcess
       if (MODULES[bare]) return MODULES[bare]
       if (source.startsWith('.') && importer) {
         const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
