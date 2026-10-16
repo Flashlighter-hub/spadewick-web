@@ -254,6 +254,7 @@ describe('moves over a connection', () => {
     const { hostLink, join } = setup()
     const ann = await join('Ann'); const bob = await join('Bob')
     ann.leave()
+    await new Promise(r => setTimeout(r, 60))   // WEB: leave() closes the channel 50 ms after its goodbye; settle() alone is shorter than that on Linux
     await settle()
     expect(ann.closed).toHaveLength(1)
     expect(hostLink.peers.map(p => p.name)).toEqual(['Bob'])

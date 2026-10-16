@@ -82,6 +82,7 @@ const svelteFiles = walkFiles(join(ROOT, 'renderer'), '.svelte')
 const rendererJs = walkFiles(join(ROOT, 'renderer/src'), '.js')
 const mainJs = [
   ...walkFiles(join(ROOT, 'main'), '.js'),
+  ...walkFiles(join(ROOT, 'web', 'ui'), '.js'),   // WEB: the web interface (the menu moved here); shims imitate Node's and Electron's own messages
   // code shared by both processes (validation messages, card sizes) is held to the same rule
   ...walkFiles(join(ROOT, 'shared'), '.js').filter(f => !/[\\/](strings|i18n|plural)\.js$/.test(f))
 ]

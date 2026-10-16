@@ -6,6 +6,18 @@ This document lists everything needed to turn this copy of the Spadewick desktop
 application hosted for free on Cloudflare Pages. It covers what changes, what is added, what is removed and what must be
 fixed for the code to run in a browser. The desktop repository (`Flashlighter-hub/spadewick`) is not changed by any of it.
 
+## Progress
+
+| Phase | State | Notes |
+|---|---|---|
+| 0 Repository preparation | done | Electron, packaging, CLI, Windows CI and spikes removed; Linux CI `.github/workflows/web.yml`. `src/main/log.js` and `src/main/core/lock.js` are kept and replaced at build time (`src/web/build/webModules.mjs`) instead of deleted, which keeps upstream merges simpler. `@sqlite.org/sqlite-wasm` and `@resvg/resvg-wasm` are added in the phases that use them (2 and 5). |
+| 1 Runtime foundation | done | Worker, bridge (unchanged preload), shims for `fs` (in-memory), `path`, `os`, `url`, `crypto`, `zlib`, `child_process`, `electron`, settings store with remembered preferences. The application menu is now data in `src/web/ui/menu.js` (the menu bar that draws it is Phase 9). better-sqlite3, sharp and resvg are placeholders that say which phase brings them. |
+| 2–15 | not started | |
+
+Known test changes: the unit tests that need the database, drawing or images, `tests/integration/` and `tests/e2e/` are
+not run until the phases that bring what they need (list in `vitest.config.mjs`). `tests/unit/tableLink.test.js` waited
+too little for a guest's channel to close (it passed on Windows only); fixed with a `WEB:` line.
+
 ---
 
 ## 1. Summary

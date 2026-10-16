@@ -125,6 +125,6 @@ describe('the whole guide', () => {
   it('every shortcut it names is wired to something', () => {
     const view = readFileSync('src/renderer/src/components/CanvasEditor.svelte', 'utf8')
     for (const k of ["'g'", "'d'", "'a'", "'c'", "'x'", "'v'"]) expect(view).toContain("k === " + k)
-    expect(readFileSync('src/main/index.js', 'utf8')).toContain('CmdOrCtrl+H')
+    expect(readFileSync('src/web/ui/menu.js', 'utf8')).toContain('CmdOrCtrl+H')   // WEB: the menu moved from src/main/index.js
   })
 })
