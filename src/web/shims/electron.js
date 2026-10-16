@@ -26,6 +26,13 @@ export const ipcMain = {
   off() {}
 }
 
+/** Put a wrapper around a registered handler (the web layer adds to what a desktop handler does). */
+export function wrapHandler(channel, wrap) {
+  const fn = handlers.get(channel)
+  if (!fn) throw new Error(`No handler registered for '${channel}'`)
+  handlers.set(channel, wrap(fn))
+}
+
 /** The handler of a channel, or undefined. */
 export const handlerOf = channel => handlers.get(channel)
 export const channels = () => [...handlers.keys()]

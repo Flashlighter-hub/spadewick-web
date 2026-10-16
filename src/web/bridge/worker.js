@@ -53,6 +53,7 @@ export const whenReady = new Promise((resolve, reject) => {
       case 'remember': remember(m.key, m.value); return
       case 'open-external': window.open(m.url, '_blank', 'noopener,noreferrer'); return
       case 'notice': emit('web:notice', m); return
+      case 'project-state': emit('web:project-state', m.state); return
       case 'ready': resolve(m.channels); return
       case 'fatal': failed = m.error; reject(new Error(m.error.message)); emit('web:fatal', m.error); return
     }

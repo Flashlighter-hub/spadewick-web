@@ -1,0 +1,5 @@
+/* The web version's room above the desktop interface (WEB-PRD Phase 3): the bar of WebBar.svelte. */
+:root { --web-bar-height: 36px; }
+#app { position: fixed; top: var(--web-bar-height); left: 0; right: 0; bottom: 0; }
+/* the desktop interface fills the window; here it fills what the bar leaves */
+#app .app-shell { height: 100% !important; }

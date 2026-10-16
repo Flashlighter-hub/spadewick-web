@@ -17,6 +17,9 @@ if (missing.length) {
   setCatalog(mergeStrings(strings, webStrings))
 
   await import('../preload/index.js')
+  await import('./ui/web.css')
+  const projectUi = await import('./project/projectUi.js')
+  projectUi.install()
   const { on } = await import('./bridge/worker.js')
   const { toast } = await import('../renderer/src/stores/ui.js')
 
@@ -30,4 +33,7 @@ if (missing.length) {
   document.title = appTitle()
 
   await import('../renderer/src/main.js')
+
+  const { default: WebShell } = await import('./ui/WebShell.svelte')
+  new WebShell({ target: document.getElementById('web-shell') })
 }

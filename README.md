@@ -3,18 +3,22 @@
 The Spadewick card-game design tool, running entirely in a browser tab. It is the web version of the desktop app
 [Spadewick](https://github.com/Flashlighter-hub/spadewick). The plan for the move is [WEB-PRD.md](WEB-PRD.md).
 
-**Status: early work.** Phases 0 to 2 of the plan are done:
+**Status: early work.** Phases 0 to 3 of the plan are done:
 - the desktop app's code runs in the browser: its interface in the page, its background logic in a background thread;
-- projects can be created and edited (sets, fields, cards, undo, snapshots), with the database held in memory.
+- projects can be created and edited (sets, fields, cards, undo, snapshots), with the database held in memory;
+- projects are imported from and exported to your computer (the bar above the app, Ctrl+O and Ctrl+S).
 
-Not yet: drawing cards and fonts (Phase 5), images (Phase 6), importing and exporting projects and files (Phases 3
-and 4), and the exports (Phase 7). Until Phase 3, a project lives only as long as the tab.
+Not yet: drawing cards and fonts (Phase 5), images (Phase 6), opening other files and downloads from the app's own
+dialogs (Phase 4), and the exports to Tabletop Simulator, PDF and PNG (Phase 7).
 
 ## How it keeps your work private
 
 - **Nothing reaches a server.** The site is static files. Your project is never uploaded.
 - **Nothing about your project is stored on your computer.** It lives in the tab's memory and is gone when you close
-  the tab. To keep it, you export it as a file (from Phase 3 on).
+  the tab. To keep it, export it (Ctrl+S): you get one `.spadewick.zip` file, which you import again next time. The
+  browser asks before you close a tab with changes you have not exported.
+- **Desktop projects work too.** Import a project folder from the desktop app (close it there first), or a zip of it.
+  Unzip an exported `.spadewick.zip` and the desktop app opens the folder inside.
 - **Interface preferences are remembered** between visits in the browser: theme, panel sizes, export options. They
   contain nothing from your projects. The list is `REMEMBERED_SETTINGS` in `src/web/config.js`.
 

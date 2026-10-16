@@ -6,7 +6,7 @@
  * merge from the desktop version that starts using a new function is noticed (WEB-PRD Phase 15).
  */
 import { Buffer } from 'buffer'
-import { fsError, lookup, parentOf, mkdirp, putFile, cloneNode, normalize, parts, flushLive, dropLive, moveLive } from './memfs.js'
+import { fsError, lookup, parentOf, mkdirp, putFile, cloneNode, normalize, parts, flushLive, dropLive, moveLive, noteChange } from './memfs.js'
 
 const encodingOf = options => (typeof options === 'string' ? options : options?.encoding ?? null)
 
@@ -86,6 +86,7 @@ export function appendFileSync(path, data, options) {
   joined.set(add, node.data.byteLength)
   node.data = joined
   node.mtimeMs = Date.now()
+  noteChange(path)
 }
 
 export function copyFileSync(src, dest) {
@@ -100,6 +101,7 @@ export function unlinkSync(path) {
   if (node.type === 'dir') throw fsError('EISDIR', 'unlink', path)
   dir.children.delete(name)
   dropLive(path)
+  noteChange(path)
   dir.mtimeMs = Date.now()
 }
 
@@ -151,6 +153,7 @@ export function rmSync(path, options = {}) {
   }
   dir.children.delete(name)
   dropLive(path)
+  noteChange(path)
   dir.mtimeMs = Date.now()
 }
 
@@ -178,6 +181,7 @@ export function renameSync(from, to) {
   if (there) dropLive(to)
   dest.dir.children.set(dest.name, node)
   moveLive(from, to)
+  noteChange(from); noteChange(to)
   src.dir.mtimeMs = dest.dir.mtimeMs = Date.now()
 }
 

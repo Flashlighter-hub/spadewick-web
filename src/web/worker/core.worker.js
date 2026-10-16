@@ -16,6 +16,7 @@
  *   { type: 'remember', key, value }               a remembered setting changed: the page stores it
  *   { type: 'open-external', url }                 open a web link in a new tab
  *   { type: 'notice', key, what }                  something the user should be told
+ *   { type: 'project-state', state }               the open project's name and whether it has unexported changes (Phase 3)
  */
 import './globals.js'
 import Store from '../shims/electron-store.js'
@@ -26,6 +27,7 @@ import { loadSqlite } from '../sqlite/engine.js'
 const post = message => self.postMessage(message)
 const waiting = []          // calls that arrived before the core was ready
 let ready = false
+let afterCall = () => {}
 
 self.onmessage = event => {
   const message = event.data
@@ -49,6 +51,8 @@ async function start({ settings }) {
     loadSqlite()
   ])
   registerIpcHandlers(store)
+  const { registerWebProject } = await import('../project/service.js')
+  afterCall = registerWebProject(post)
   onProjectChange(change => post({ type: 'event', channel: 'project:changed', args: [change] }))
 
   ready = true
@@ -65,4 +69,5 @@ async function answer({ id, channel, args }) {
   } catch (err) {
     post({ type: 'result', id, error: { name: err?.name ?? 'Error', message: String(err?.message ?? err), code: err?.code } })
   }
+  try { afterCall() } catch (err) { console.error('project state', err) }
 }

@@ -17,6 +17,15 @@ const newDir = () => { const t = now(); return { type: 'dir', children: new Map(
 
 let root = newDir()
 
+// ---------------------------------------------------------------------------
+// Changes (WEB-PRD §5.4): a counter that goes up whenever something under /projects changes, so the web layer can tell
+// whether the open project has changed since it was last exported.
+// ---------------------------------------------------------------------------
+
+let generation = 0
+export const changeGeneration = () => generation
+export function noteChange(path) { if (/^\/projects(\/|$)/.test(normalize(path))) generation++ }
+
 export function fsError(code, syscall, path) {
   const text = {
     ENOENT: 'no such file or directory', EEXIST: 'file already exists', ENOTDIR: 'not a directory',
@@ -72,21 +81,25 @@ export function mkdirp(path) {
   let node = root
   for (const name of parts(path)) {
     let next = node.children.get(name)
-    if (!next) { next = newDir(); node.children.set(name, next); node.mtimeMs = now() }
+    if (!next) { next = newDir(); node.children.set(name, next); node.mtimeMs = now(); noteChange(path) }
     else if (next.type !== 'dir') throw fsError('ENOTDIR', 'mkdir', path)
     node = next
   }
   return node
 }
 
-/** Store bytes at `path` (the parent folder must exist). */
-export function putFile(path, data, syscall = 'open') {
+/**
+ * Store bytes at `path` (the parent folder must exist). `silent`: not a change of the project (a live file's holder
+ * writing what it already counted, see better-sqlite3.js).
+ */
+export function putFile(path, data, syscall = 'open', { silent = false } = {}) {
   const { dir, name } = parentOf(path, syscall)
   const existing = dir.children.get(name)
   if (existing?.type === 'dir') throw fsError('EISDIR', syscall, path)
   const t = now()
   dir.children.set(name, { type: 'file', data, mtimeMs: t, birthtimeMs: existing?.birthtimeMs ?? t })
   dir.mtimeMs = t
+  if (!silent) noteChange(path)
 }
 
 /** A deep copy of a node (file data is copied, so the copy can be changed on its own). */
@@ -171,6 +184,6 @@ export function usage(path = '/') {
 }
 
 /** Empty the whole file system (tests, and the worker's start). */
-export function reset() { root = newDir(); live.clear() }
+export function reset() { root = newDir(); live.clear(); generation = 0 }
 
 export const rootNode = () => root

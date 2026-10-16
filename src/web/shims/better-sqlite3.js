@@ -16,7 +16,7 @@
  */
 import { Buffer } from 'buffer'
 import { getSqlite } from '../sqlite/engine.js'
-import { lookup, putFile, parentOf, setLive, clearLive, livePathOf, flushLive } from './memfs.js'
+import { lookup, putFile, parentOf, setLive, clearLive, livePathOf, flushLive, noteChange } from './memfs.js'
 
 const CACHE_SIZE = 400
 
@@ -120,6 +120,12 @@ export default class Database {
     return new SqliteError(message, code)
   }
 
+  /** Something may have been written: the file is out of date, and the project has changed (WEB-PRD §5.4). */
+  _changed() {
+    this._dirty = true
+    if (this._flushTo) { const path = livePathOf(this._flushTo); if (path) noteChange(path) }
+  }
+
   _check() {
     if (!this.open) throw new TypeError('The database connection is not open')
   }
@@ -165,7 +171,7 @@ export default class Database {
   _flush(path) {
     if (!this.open || !this._dirty) return
     try { parentOf(path, 'open') } catch { return }   // its folder was removed: nothing to write to, as for an unlinked file
-    putFile(path, this._capi.sqlite3_js_db_export(this._db.pointer))
+    putFile(path, this._capi.sqlite3_js_db_export(this._db.pointer), 'open', { silent: true })   // its changes were counted as they were made
     this._dirty = false
   }
 
@@ -186,7 +192,7 @@ export default class Database {
 
   exec(sql) {
     this._check()
-    try { this._db.exec(String(sql)) } catch (err) { throw this._error(err) } finally { this._dirty = true }
+    try { this._db.exec(String(sql)) } catch (err) { throw this._error(err) } finally { this._changed() }
     return this
   }
 
@@ -194,7 +200,7 @@ export default class Database {
     this._check()
     const text = String(source).trim()
     const st = this.prepare(`PRAGMA ${text}`)
-    this._dirty = true
+    if (/=|\(/.test(text)) this._changed()   // a pragma that sets something
     const rows = st.reader ? st.all() : (st.run(), [])
     // a checkpoint on the desktop moves everything into project.db; here it writes the database into its file
     if (/^wal_checkpoint/i.test(text) && this._flushTo) this._flushLive()
@@ -360,7 +366,7 @@ class Statement {
     } catch (err) {
       throw db._error(err)
     } finally {
-      if (!this.readonly) db._dirty = true
+      if (!this.readonly) db._changed()
       try { st.reset(true) } catch { /* the error above is the one that matters */ }
     }
   }
@@ -410,7 +416,7 @@ class Statement {
       }
     } finally {
       this.busy = false
-      if (!this.readonly) db._dirty = true
+      if (!this.readonly) db._changed()
       try { st.reset(true) } catch { /* finished */ }
       db._giveBack(this.source, st)
     }
