@@ -165,6 +165,39 @@ export function moveLive(from, to) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Files fetched when first read (WEB-PRD Phase 5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Put files under `prefix` whose bytes are fetched the first time something reads them: the bundled fonts and colour
+ * profile, which the site serves. `entries` is [{ path, size }] with paths relative to `prefix`; `load(absolutePath)`
+ * answers the bytes, synchronously (the core reads fonts in synchronous code; a worker may fetch synchronously).
+ * They exist, are listed and have their size before they are read; most are never read.
+ */
+export function mountLazy(prefix, entries, load) {
+  const base = normalize(prefix)
+  for (const { path: rel, size } of entries) {
+    const abs = normalize(`${base}/${rel}`)
+    const p = parts(abs)
+    const name = p.pop()
+    const dir = mkdirp(`/${p.join('/')}`)
+    if (dir.children.has(name)) continue
+    const t = now()
+    let bytes = null
+    const node = { type: 'file', lazySize: size, mtimeMs: t, birthtimeMs: t }
+    Object.defineProperty(node, 'data', {
+      enumerable: true,
+      get() { if (!bytes) { bytes = load(abs); delete node.lazySize } return bytes },
+      set(v) { bytes = v; delete node.lazySize }
+    })
+    dir.children.set(name, node)
+  }
+}
+
+/** The size of a file without fetching it. */
+export const sizeOf = node => (node.lazySize ?? node.data.byteLength)
+
 /** Every file below `path` as [absolutePath, Uint8Array] (for zipping a folder or handing it to the page). */
 export function listFiles(path) {
   flushLive(path)

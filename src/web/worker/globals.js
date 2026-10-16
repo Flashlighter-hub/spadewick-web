@@ -16,7 +16,7 @@ if (typeof globalThis.process === 'undefined') {
     versions: {},          // no `node` entry, so libraries do not take their Node code paths
     pid: 1,
     execPath: '/',
-    resourcesPath: undefined,
+    resourcesPath: '/resources',   // the bundled fonts and profile, fetched when read (src/web/resources/resources.js)
     cwd: () => '/',
     nextTick: (fn, ...args) => queueMicrotask(() => fn(...args)),
     kill: () => { const err = new Error('No processes in the web version'); err.code = 'ESRCH'; throw err },

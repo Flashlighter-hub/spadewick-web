@@ -28,6 +28,9 @@ import Store from '../shims/electron-store.js'
 import { connectPage, handlerOf, channels, ipcMain } from '../shims/electron.js'
 import { SETTINGS_DEFAULTS } from '../config.js'
 import { loadSqlite } from '../sqlite/engine.js'
+import { loadResvg } from '../raster/resvg.js'
+import { mountSiteResources } from '../resources/resources.js'
+import resvgWasmUrl from '@resvg/resvg-wasm/index_bg.wasm?url'
 
 const post = message => self.postMessage(message)
 const waiting = []          // calls that arrived before the core was ready
@@ -54,11 +57,14 @@ async function start({ settings }) {
   connectPage(post, dialogs)
   const store = new Store({ defaults: SETTINGS_DEFAULTS, saved: settings ?? {}, onRemember: (key, value) => post({ type: 'remember', key, value }) })
 
-  // the core is loaded only now, after globals.js has given it Buffer and process; the database engine with it
+  // the fonts must be listed before the core loads: it reads the list of bundled families when it starts (fontFiles.js)
+  await mountSiteResources()
+  // the core is loaded only now, after globals.js has given it Buffer and process; the database and drawing engines with it
   const [{ registerIpcHandlers }, { onProjectChange }] = await Promise.all([
     import('../../main/ipc/index.js'),
     import('../../main/core/changes.js'),
-    loadSqlite()
+    loadSqlite(),
+    loadResvg(fetch(resvgWasmUrl))
   ])
   registerIpcHandlers(store)
   const { registerWebProject } = await import('../project/service.js')

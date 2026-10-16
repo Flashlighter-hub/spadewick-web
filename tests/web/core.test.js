@@ -48,12 +48,15 @@ describe('the core in the web version', () => {
     expect(set).toBeTruthy()
   })
 
-  it('says plainly what comes in a later phase', async () => {
+  it('draws a card with the WebAssembly drawing engine (Phase 5)', async () => {
     const [set] = await call('sets:list')
     const template = await call('templates:create', { name: 'Face', svgSource: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 350"><rect width="250" height="350" fill="#123"/></svg>' })
     await call('sets:update', { id: set.id, defaultTemplateId: template.id })
     const card = await call('cards:create', { setId: set.id })
-    await expect(call('templates:render', { cardId: card.id ?? card })).rejects.toThrow(/WEB-PRD Phase [56]/)
+    const b64 = await call('templates:render', { cardId: card.id ?? card })
+    const png = Buffer.from(b64, 'base64')
+    expect(png.subarray(1, 4).toString()).toBe('PNG')
+    expect(png.readUInt32BE(16)).toBe(500)            // drawn at the project's card width
   })
 
   it('turns a file dialog into a notice until Phase 4 brings file pickers', async () => {

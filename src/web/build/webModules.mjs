@@ -21,7 +21,7 @@ export const MODULES = {
   'electron-store': shim('electron-store.js'),
   'better-sqlite3': shim('better-sqlite3.js'),   // Phase 2: SQLite WebAssembly
   sharp: shim('sharp.js'),                       // Phase 6: browser image operations
-  '@resvg/resvg-js': shim('resvg.js')            // Phase 5: @resvg/resvg-wasm
+  '@resvg/resvg-js': shim('resvg.js')            // @resvg/resvg-wasm, fonts given as bytes
 }
 
 /** Desktop source files the web build uses a different file for. */
@@ -55,6 +55,34 @@ export function webModules({ electron } = {}) {
       }
       return null
     }
+  }
+}
+
+/**
+ * wawoff2 (WOFF2 fonts, fontFiles.js) is an Emscripten build that hands back its module only under Node; in a browser
+ * its wrapper would wait for the WebAssembly forever. The one line it lacks is added when the site is built (and when
+ * the development server bundles it). Its WebAssembly is inside the file, so nothing else is fetched.
+ */
+const WAWOFF2_BINDING = /wawoff2[\\/]build[\\/](de)?compress_binding\.js$/
+const exportModule = code => `${code}\n;module.exports = Module;\n`
+
+export function wawoff2Export() {
+  return {
+    name: 'spadewick-wawoff2',
+    enforce: 'pre',          // before the bundler turns the file into a module
+    // the file itself only: the bundler also makes a wrapper of it ('…?commonjs-wrapped'), which must stay as it is
+    transform(code, id) { return WAWOFF2_BINDING.test(id) ? { code: exportModule(code), map: null } : null }
+  }
+}
+
+/** The same for esbuild, which bundles dependencies for the development server. */
+export const wawoff2EsbuildExport = {
+  name: 'spadewick-wawoff2',
+  setup(build) {
+    build.onLoad({ filter: WAWOFF2_BINDING }, async args => {
+      const { readFile } = await import('fs/promises')
+      return { contents: exportModule(await readFile(args.path, 'utf8')), loader: 'js' }
+    })
   }
 }
 

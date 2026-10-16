@@ -10,20 +10,29 @@ import { webModules, webAliases } from './src/web/build/webModules.mjs'
  *   desktop-progress  every desktop test that needs the web versions, to follow how many pass as the phases land
  * `npm test` runs the first three; `npm run test:progress` the last.
  *
- * On 2026-10-16 (Phase 2) desktop-progress passes 445 of 809 tests. Each failing one waits for drawing or fonts (Phase 5) or
- * images (Phase 6), or needs what the web version does not have: the command line (cardBacks, one test of balanceViews)
- * or a log file (renderContextLog; the web version logs to the console, Phase 10).
+ * On 2026-10-16 (Phase 5) desktop-progress passes 594 of 809 tests. Each failing one waits for images (Phase 6), or
+ * needs what the web version does not have: the command line (cardBacks, one test of balanceViews) or a log file (renderContextLog; the web version logs to the console, Phase 10).
  * tests/e2e/ is not run: its harness drives the desktop main process, and is replaced in Phase 12.
  */
 const DESKTOP_ON_WEB = [
   'tests/unit/cardSizes.test.js',
+  'tests/unit/exportHelpers.test.js',
+  'tests/unit/legacyPalette.test.js',
+  'tests/unit/production.test.js',
+  'tests/unit/richLayout.test.js',
+  'tests/unit/textControls.test.js',
+  'tests/unit/textEngine.test.js',
+  'tests/integration/bundledFonts.test.js',
   'tests/integration/cardSizeModel.test.js',
+  'tests/integration/displayName.test.js',
   'tests/integration/findReplace.test.js',
   'tests/integration/projectChanges.test.js',
   'tests/integration/projects.test.js',
   'tests/integration/setsFieldsCards.test.js',
   'tests/integration/tables.test.js',
-  'tests/integration/templateCanvasLock.test.js'
+  'tests/integration/templateCanvasLock.test.js',
+  'tests/integration/textCheck.test.js',
+  'tests/integration/textEngine.test.js'
 ]
 
 /** Every desktop test that needs the database, drawing or images (anything native on the desktop). */

@@ -33,6 +33,7 @@ class RasterCrash extends Error {}
 
 /** rasterWorker.js sits beside this file in a checkout, and beside the bundle (or one level up from a chunk) once built. */
 function workerFile() {
+  if (process.platform === 'web') return 'raster.worker.js'   // WEB: the helper is a worker (src/web/shims/child_process.js)
   const here = dirname(fileURLToPath(import.meta.url))
   return [join(here, 'rasterWorker.js'), join(here, '../rasterWorker.js')].find(p => existsSync(p)) ?? null
 }

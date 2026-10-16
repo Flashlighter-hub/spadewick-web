@@ -6,7 +6,7 @@
  * merge from the desktop version that starts using a new function is noticed (WEB-PRD Phase 15).
  */
 import { Buffer } from 'buffer'
-import { fsError, lookup, parentOf, mkdirp, putFile, cloneNode, normalize, parts, flushLive, dropLive, moveLive, noteChange } from './memfs.js'
+import { fsError, lookup, parentOf, mkdirp, putFile, cloneNode, normalize, parts, flushLive, dropLive, moveLive, noteChange, sizeOf } from './memfs.js'
 
 const encodingOf = options => (typeof options === 'string' ? options : options?.encoding ?? null)
 
@@ -23,7 +23,7 @@ const asResult = (bytes, encoding) => {
 }
 
 function statOf(node) {
-  const size = node.type === 'file' ? node.data.byteLength : 4096
+  const size = node.type === 'file' ? sizeOf(node) : 4096
   return {
     size,
     mode: node.type === 'file' ? 0o100644 : 0o040755,
