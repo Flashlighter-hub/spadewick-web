@@ -3,7 +3,7 @@
 The Spadewick card-game design tool, running entirely in a browser tab. It is the web version of the desktop app
 [Spadewick](https://github.com/Flashlighter-hub/spadewick). The plan for the move is [WEB-PRD.md](WEB-PRD.md).
 
-**Status: early work.** Phases 0 to 8 of the plan are done:
+**Status: early work.** Phases 0 to 9 of the plan are done:
 - the desktop app's code runs in the browser: its interface in the page, its background logic in a background thread;
 - projects can be created and edited (sets, fields, cards, undo, snapshots), with the database held in memory;
 - projects are imported from and exported to your computer (the bar above the app, Ctrl+O and Ctrl+S, or drop one on
@@ -14,9 +14,11 @@ The Spadewick card-game design tool, running entirely in a browser tab. It is th
 - the Export dialog downloads what it makes: Tabletop Simulator decks (with Steam Cloud links), print-and-play and
   production PDFs, PNG sheets and card images;
 - your own templates, presets and components travel inside every exported project, and are merged into the library of
-  the tab that imports it (*Library* in the bar downloads them alone).
+  the tab that imports it (File → Download Library saves them alone);
+- the desktop's menus are a menu bar above the app, with their keyboard shortcuts (New Project is Alt+N: browsers keep
+  Ctrl+N); the welcome screen, Preferences, About, the status bar and the guide speak of a browser tab, not folders.
 
-Not yet: the full menu bar (Phase 9; the Export dialog has no menu to open it from until then).
+Not yet: error reporting and robustness (Phase 10), sharing a virtual table (Phase 11), hosting (Phase 13).
 
 ## How it keeps your work private
 

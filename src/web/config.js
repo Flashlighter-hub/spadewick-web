@@ -37,3 +37,6 @@ export const FOLDERS = ['/projects', '/tmp', '/imports', '/downloads', '/library
 /** Project size limits in bytes (WEB-PRD §5.2). */
 export const WARN_PROJECT_BYTES = 500 * 1024 * 1024
 export const MAX_PROJECT_BYTES = 2 * 1024 * 1024 * 1024
+
+/** The version of the site (package.json, put in by the build; 'dev' in the tests). */
+export const VERSION = typeof __SPADEWICK_VERSION__ === 'string' ? __SPADEWICK_VERSION__ : 'dev'

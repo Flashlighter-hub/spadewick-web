@@ -30,14 +30,17 @@ describe('web text', () => {
     expect(missing).toEqual([])
   })
 
-  it('replaces only desktop text that exists', () => {
-    for (const [area, entries] of Object.entries(webStrings)) {
-      if (area === 'web') continue
-      // the same kind of text: a string, or a function where the desktop text makes plurals
-      for (const [key, value] of Object.entries(entries)) {
-        expect(['string', 'function'], `${area}.${key}`).toContain(typeof strings[area]?.[key])
-        expect(typeof value, `${area}.${key}`).toBe(typeof strings[area][key])
+  it('replaces only desktop text that exists, with the same kind of text', () => {
+    // every piece of text laid over the desktop's is there on the desktop, as a string or (plurals) a function
+    const wrong = []
+    const check = (over, base, path) => {
+      for (const [key, value] of Object.entries(over)) {
+        const at = `${path}.${key}`, there = base?.[key]
+        if (value && typeof value === 'object') { if (!there || typeof there !== 'object') wrong.push(`${at} is not desktop text`); else check(value, there, at) }
+        else if (typeof value !== typeof there || !['string', 'function'].includes(typeof there)) wrong.push(`${at}: ${typeof value} over ${typeof there}`)
       }
     }
+    for (const [area, entries] of Object.entries(webStrings)) if (area !== 'web') check(entries, strings[area], area)
+    expect(wrong).toEqual([])
   })
 })

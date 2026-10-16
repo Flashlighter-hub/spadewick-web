@@ -15,9 +15,19 @@
       .web-problem h1 { font-size: 20px; margin: 0 }
       .web-problem p { max-width: 560px; margin: 0 }
       @media (prefers-color-scheme: dark) { .web-problem { background: #1e1e1e; color: #eee } }
+      /* shown until the background part of the app is ready (WEB-PRD Phase 9); main.js removes it */
+      .web-loading { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 10px; font: 15px/1.5 system-ui, sans-serif; background: #fff; color: #222 }
+      .web-loading .mark { font-size: 40px; animation: web-pulse 1.4s ease-in-out infinite }
+      .web-loading small { color: #777 }
+      @keyframes web-pulse { 50% { opacity: .35 } }
+      @media (prefers-reduced-motion: reduce) { .web-loading .mark { animation: none } }
+      @media (prefers-color-scheme: dark) { .web-loading { background: #1e1e1e; color: #eee } .web-loading small { color: #999 } }
     </style>
   </head>
   <body>
+    <div id="web-loading" class="web-loading" role="status"><span class="mark" aria-hidden="true">♠</span><span>Starting Spadewick…</span>
+      <small>The first visit downloads about 10 MB. Nothing is uploaded.</small></div>
     <div id="web-shell"></div>
     <div id="app"></div>
     <noscript>Spadewick runs in your browser and needs JavaScript.</noscript>

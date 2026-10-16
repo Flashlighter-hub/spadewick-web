@@ -5,7 +5,7 @@
  *   webDialog      a store: which web dialog is open ('import' | 'export' | null)
  *   importProject  the Import dialog; resolves to the path of the project put into memory, or null
  *   exportProject  zip the open project and download it
- *   install()      put the web behaviour around the desktop's project calls, Ctrl+S / Ctrl+O, and the warning on leaving
+ *   install()      put the web behaviour around the desktop's project calls, and the warning on leaving
  *
  * The desktop's own actions (src/renderer/src/stores/actions.js) still open, make and close projects; "Open Project…"
  * reaches projects.open(null), which here shows the Import dialog instead of a folder dialog, then opens what was
@@ -157,13 +157,7 @@ export function install() {
   // making a new project replaces the one in memory
   projects.create = async opts => (await mayDiscard() ? create(opts) : null)
 
-  // Ctrl+S exports, Ctrl+O imports (WEB-PRD §5.4); the browser's own Save and Open would mean nothing here
-  window.addEventListener('keydown', e => {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
-    const key = e.key.toLowerCase()
-    if (key === 's') { e.preventDefault(); if (get(projectState).open) exportProject() }
-    else if (key === 'o') { e.preventDefault(); import('../../renderer/src/stores/actions.js').then(a => a.openProject(null)) }
-  }, true)
+  // Ctrl+S, Ctrl+O and the other menu keys: ui/shortcuts.js (Phase 9)
 
   // closing or reloading the tab ends the project: the browser asks first while there are unexported changes
   window.addEventListener('beforeunload', e => {

@@ -9,6 +9,7 @@ import { missingFeatures, showProblem } from './ui/startup.js'
 
 const missing = missingFeatures()
 if (missing.length) {
+  document.getElementById('web-loading')?.remove()
   showProblem('unsupportedTitle', 'unsupportedText', { missing: missing.join(', ') }, false)
 } else {
   const { setCatalog, tr } = await import('../shared/i18n.js')
@@ -20,9 +21,13 @@ if (missing.length) {
   await import('./ui/web.css')
   const projectUi = await import('./project/projectUi.js')
   projectUi.install()
+  ;(await import('./ui/shortcuts.js')).install()
   ;(await import('./files/picker.js')).install()
   ;(await import('./files/dropZone.js')).install()
-  const { on } = await import('./bridge/worker.js')
+  const { on, whenReady } = await import('./bridge/worker.js')
+  // the loading screen stays until the core is ready, or says why it could not start
+  const loading = document.getElementById('web-loading')
+  whenReady.then(() => loading?.remove(), () => loading?.remove())
   const { toast } = await import('../renderer/src/stores/ui.js')
 
   on('web:notice', ({ key, what }) => {

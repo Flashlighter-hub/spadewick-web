@@ -9,7 +9,7 @@ import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { fileURLToPath } from 'url'
 import { webModules, webAliases, wawoff2Export, wawoff2EsbuildExport } from './src/web/build/webModules.mjs'
-import { cpSync, createReadStream, existsSync, statSync, readdirSync, writeFileSync } from 'fs'
+import { cpSync, createReadStream, existsSync, statSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import { join, extname, normalize, sep } from 'path'
 
 const here = p => fileURLToPath(new URL(p, import.meta.url))
@@ -60,11 +60,36 @@ function resources() {
   }
 }
 
+/**
+ * The licences of what the site is made with (Help → About, WEB-PRD Phase 9): THIRD-PARTY-NOTICES.md as a page of its
+ * own, licenses.html. Its words are shown as they are written (Phase 14 brings the notices up to date for the web).
+ */
+function notices() {
+  const page = () => {
+    const text = readFileSync(here('./THIRD-PARTY-NOTICES.md'), 'utf8').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spadewick: licences</title><style>body{margin:0;padding:24px;font:14px/1.55 system-ui,sans-serif;background:#fff;color:#222}
+pre{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;max-width:960px;margin:0 auto}
+@media (prefers-color-scheme:dark){body{background:#1e1e1e;color:#eee}}</style></head><body><pre>${text}</pre></body></html>`
+  }
+  let outDir
+  return {
+    name: 'spadewick-notices',
+    configResolved(config) { outDir = config.build.outDir },
+    configureServer(server) {
+      server.middlewares.use('/licenses.html', (_req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(page()) })
+    },
+    closeBundle() { if (outDir) writeFileSync(join(outDir, 'licenses.html'), page()) }
+  }
+}
+
+const VERSION = JSON.parse(readFileSync(here('./package.json'), 'utf8')).version
 
 export default defineConfig({
   root: here('./src/web'),
   publicDir: here('./public'),
-  plugins: [webModules(), wawoff2Export(), svelte({ configFile: here('./svelte.config.mjs') }), resources()],
+  plugins: [webModules(), wawoff2Export(), svelte({ configFile: here('./svelte.config.mjs') }), resources(), notices()],
+  define: { __SPADEWICK_VERSION__: JSON.stringify(VERSION) },
   resolve: { alias: webAliases },
   worker: {
     format: 'es',

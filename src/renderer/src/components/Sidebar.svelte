@@ -154,7 +154,8 @@
   <h2 class="section-header">{tr('sidebar.project')}</h2>
 
   {#if $project}
-    <div class="project-name" title={$project.path}>{$project.meta?.name ?? tr('sidebar.unnamed')}</div>
+    <!-- WEB: the tooltip names the project, not its place in the tab's memory (WEB-PRD Phase 9) -->
+    <div class="project-name" title={$project.meta?.name ?? ''}>{$project.meta?.name ?? tr('sidebar.unnamed')}</div>
   {:else}
     <div class="no-project">{tr('sidebar.noProjectOpen')}</div>
   {/if}

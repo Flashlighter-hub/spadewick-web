@@ -1,8 +1,8 @@
 <script>
   import { onDestroy } from 'svelte'
   import { tr } from '../../shared/i18n.js'
-  import { projectState, webDialog, mayDiscard, exportLibrary } from '../project/projectUi.js'
-  import { newProject, openProject, closeProject } from '../../renderer/src/stores/actions.js'
+  import { projectState, webDialog } from '../project/projectUi.js'
+  import MenuBar from './MenuBar.svelte'
 
   // the time since the last export, kept current
   let now = Date.now()
@@ -20,20 +20,14 @@
     : s.exportedAt ? tr('web.bar.changedSince', { when: since(s.exportedAt) })
     : s.importedAt ? tr('web.bar.changedSinceImport')
     : tr('web.bar.notExported')
-
-  async function close() { if (await mayDiscard()) await closeProject() }
 </script>
 
 <header class="web-bar" aria-label={tr('web.bar.label')}>
   <span class="brand" aria-hidden="true">♠</span>
-  <nav>
-    <button on:click={() => newProject()}>{tr('web.bar.new')}</button>
-    <button on:click={() => openProject(null)} title={tr('web.bar.importHint')}>{tr('web.bar.import')}</button>
-    <button on:click={() => webDialog.set('export')} disabled={!s.open} title={tr('web.bar.exportHint')}>{tr('web.bar.export')}</button>
-    <button on:click={close} disabled={!s.open}>{tr('web.bar.close')}</button>
-    <button on:click={exportLibrary} disabled={!s.libraryItems} title={tr('web.bar.libraryHint')}>{tr('web.bar.library')}</button>
-  </nav>
+  <MenuBar state={s} />
   <span class="status" class:warn={s.open && s.dirty} role="status" aria-live="polite" title={s.open && s.dirty ? tr('web.bar.dirtyHint') : ''}>{status}</span>
+  <!-- exporting is how work is kept: it stays one click away, with its state beside it -->
+  <button class="export" on:click={() => webDialog.set('export')} disabled={!s.open} title={tr('web.bar.exportHint')}>{tr('web.bar.export')}</button>
 </header>
 
 <style>
@@ -46,14 +40,13 @@
     font: 13px/1 var(--font-ui, system-ui, sans-serif);
   }
   .brand { font-size: 16px; color: var(--color-accent-text); }
-  nav { display: flex; gap: 2px; }
-  nav button {
-    background: transparent; border: 1px solid transparent; color: inherit;
-    padding: 4px 10px; border-radius: 6px; cursor: pointer; font: inherit;
+  .export {
+    background: transparent; border: 1px solid var(--color-border); color: inherit;
+    padding: 3px 12px; border-radius: 6px; cursor: pointer; font: inherit;
   }
-  nav button:hover:not(:disabled) { background: var(--color-surface-hover); }
-  nav button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
-  nav button:disabled { opacity: .45; cursor: default; }
+  .export:hover:not(:disabled) { background: var(--color-surface-hover); }
+  .export:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+  .export:disabled { opacity: .45; cursor: default; }
   .status { margin-left: auto; color: var(--color-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .status.warn { color: var(--color-warning-text); }
 </style>

@@ -27,7 +27,10 @@ export const MODULES = {
 /** Desktop source files the web build uses a different file for. */
 export const FILES = {
   [here('./src/main/log.js')]: shim('log.js'),
-  [here('./src/main/core/lock.js')]: shim('lock.js')
+  [here('./src/main/core/lock.js')]: shim('lock.js'),
+  // parts of the interface that say something else in a tab (Phase 9): src/web/ui/desktop/ has the web versions
+  ...Object.fromEntries(['Welcome', 'PreferencesDialog', 'AboutDialog', 'StatusBar'].map(name =>
+    [here(`./src/renderer/src/components/${name}.svelte`), here(`./src/web/ui/desktop/${name}.svelte`)]))
 }
 
 const PRELOAD = here('./src/preload/index.js')

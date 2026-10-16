@@ -155,6 +155,7 @@ describe('single strings file (PRD §14.5)', () => {
     for (const f of files) {
       const src = readFileSync(f, 'utf8')
       for (const m of src.matchAll(/\btr\(\s*'([A-Za-z0-9_.]+)'/g)) {
+        if (m[1].startsWith('web.')) continue      // WEB: the web version's own text, in src/web/strings.web.js (checked by tests/web/strings.test.js)
         const value = m[1].split('.').reduce((n, p) => n?.[p], strings)
         if (value === undefined) missing.push(`${rel(f)}: ${m[1]}`)
       }
@@ -171,7 +172,9 @@ describe('single strings file (PRD §14.5)', () => {
     const walk = (node, path) => { for (const [k, v] of Object.entries(node)) (typeof v === 'object' ? walk(v, `${path}${k}.`) : all.push(`${path}${k}`)) }
     walk(strings, '')
     const dynamicPrefixes = [...used].filter(k => k.endsWith('.'))
-    const unused = all.filter(k => !used.has(k) && !dynamicPrefixes.some(p => k.startsWith(p)))
+    // WEB: menu items a browser has no use for (WEB-PRD Phase 9); kept in the file, which stays as the desktop has it
+    const notOnTheWeb = ['menu.openProjectFileDb', 'menu.recentProjects', 'menu.noRecentProjects', 'menu.revealInExplorer', 'menu.openLogsFolder']
+    const unused = all.filter(k => !used.has(k) && !dynamicPrefixes.some(p => k.startsWith(p)) && !notOnTheWeb.includes(k))
     expect(unused).toEqual([])
   })
 
