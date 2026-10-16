@@ -63,6 +63,7 @@ export function createDialogs(post) {
    *   { keep }      the folder stays after its first download, so a later call can read it again and write more into it
    *                 (the Steam Cloud links of a Tabletop Simulator export); only what is new is downloaded then
    *   { delivered } file path -> mtime of what the person already has
+   *   { busy }      an export is still writing into it
    */
   const downloadFolders = new Map()
 
@@ -141,13 +142,24 @@ export function createDialogs(post) {
   function exportFolder(zipName) {
     for (const [dir, info] of [...downloadFolders]) if (info.keep) { rmSync(dir, { recursive: true, force: true }); downloadFolders.delete(dir) }
     const dir = nextFolder(DOWNLOADS, 'export-')
-    downloadFolders.set(dir, { savedAs: null, zipName: safeName(zipName), keep: true, delivered: new Map() })
+    downloadFolders.set(dir, { savedAs: null, zipName: safeName(zipName), keep: true, delivered: new Map(), busy: true })
     return dir
   }
 
-  /** After a call: download what was written into the download folders (what is new, for a kept one), and delete them. */
-  function deliver() {
+  /** The export writing into a folder of `exportFolder` is done (or failed): what it wrote can go. */
+  function exportDone(dir) {
+    const info = downloadFolders.get(dir)
+    if (info) info.busy = false
+  }
+
+  /**
+   * After a call: download what was written into the download folders (what is new, for a kept one), and delete them.
+   * An export's folder goes as soon as its export is done; the others once no call is running (`idle`), as a call that
+   * asked for a place to save may still be writing there while the page asks other things.
+   */
+  function deliver({ idle = true } = {}) {
     for (const [dir, info] of [...downloadFolders]) {
+      if (info.busy || (!idle && !info.keep)) continue
       if (!existsSync(dir)) { downloadFolders.delete(dir); continue }
       const entries = readdirSync(dir)
       if (!entries.length) continue          // nothing written yet (a folder chosen for a later export)
@@ -221,7 +233,7 @@ export function createDialogs(post) {
     return out
   }
 
-  return { open, save, put, answerPick, deliver, clearImports, clearExports, exportFolder, shown, downloadFolders }
+  return { open, save, put, answerPick, deliver, clearImports, clearExports, exportFolder, exportDone, shown, downloadFolders }
 }
 
 /**

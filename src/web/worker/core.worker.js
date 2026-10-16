@@ -58,7 +58,7 @@ function fail(err) {
   post({ type: 'fatal', error: { name: err?.name ?? 'Error', message: String(err?.message ?? err) } })
 }
 
-async function start({ settings }) {
+async function start({ settings, e2e }) {
   const { createDialogs } = await import('../files/dialogs.js')
   dialogs = createDialogs(post)
   connectPage(post, dialogs)
@@ -79,6 +79,7 @@ async function start({ settings }) {
   const { registerWebExports } = await import('../files/exports.js')
   registerWebExports(dialogs)
   ipcMain.handle('web:put-files', async (_e, files) => dialogs.put(files))
+  if (e2e) (await import('./testHooks.js')).registerTestHooks(ipcMain)
   const { recentErrors } = await import('../shims/log.js')
   ipcMain.handle('web:error-report', async () => recentErrors())
   onProjectChange(change => post({ type: 'event', channel: 'project:changed', args: [change] }))
@@ -93,19 +94,22 @@ const PROJECT_CHANGES = new Set(['projects:create', 'projects:open', 'projects:o
 async function answer({ id, channel, args }) {
   const fn = handlerOf(channel)
   inFlight++
+  let reply
   try {
     if (!fn) throw new Error(`No handler registered for '${channel}'`)
     const value = await fn({ sender: null }, ...(args ?? []))
-    post({ type: 'result', id, value: dialogs.shown(value) })
+    reply = { type: 'result', id, value: dialogs.shown(value) }       // named before the download folder goes
   } catch (err) {
-    post({ type: 'result', id, error: { name: err?.name ?? 'Error', message: String(err?.message ?? err), code: err?.code } })
+    reply = { type: 'result', id, error: { name: err?.name ?? 'Error', message: String(err?.message ?? err), code: err?.code } }
   } finally {
     inFlight--
   }
   try {
     if (PROJECT_CHANGES.has(channel)) { dialogs.clearImports(); dialogs.clearExports() }
-    // what the core saved goes to the person once nothing is still writing (a long export, while the page asks how far it is)
-    if (inFlight === 0) dialogs.deliver()
+    // what the core saved goes to the person once nothing is still writing (a long export, while the page asks how far
+    // it is); before the answer, so the file is on its way when the interface says the export is done
+    dialogs.deliver({ idle: inFlight === 0 })
   } catch (err) { console.error('downloads', err) }
+  post(reply)
   try { afterCall() } catch (err) { console.error('project state', err) }
 }

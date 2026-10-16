@@ -76,8 +76,7 @@ describe('first project to exported cards (UC-01, UC-02, UC-03, UC-07)', () => {
     const out = join(app.root, 'exports'); mkdirSync(out, { recursive: true })
     await app.menu('menu:export-png')
     await app.page.waitForSelector('[role="dialog"]')
-    app.mockDialog.open(out)
-    await app.page.click('button:has-text("Browse")')
+    app.mockDialog.open(out)          // WEB: no folder to browse for; the download is put in `out` by the harness
     await app.page.locator('[role="dialog"] .foot button.primary-btn').click()
     await app.page.waitForSelector('.result-box:has-text("Export complete")', { timeout: 30000 })
     expect(readdirSync(out).some(f => f.endsWith('.png'))).toBe(true)

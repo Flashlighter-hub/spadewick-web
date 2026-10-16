@@ -34,3 +34,23 @@ jobs:
           name: out-web
           path: out-web
           retention-days: 7
+
+  # WEB-PRD Phase 12: the built site driven in Chrome, the desktop's scenarios and the web version's own
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: End-to-end tests (builds the site first)
+        run: npm run test:e2e
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome

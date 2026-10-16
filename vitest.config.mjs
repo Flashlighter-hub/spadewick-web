@@ -10,10 +10,10 @@ import { webModules, webAliases } from './src/web/build/webModules.mjs'
  *                     the web versions (in-memory files, SQLite, resvg and libwebp in WebAssembly, the JavaScript image
  *                     library), except the tests of what the web version does not have (WEB_LACKS)
  *   desktop-progress  the same, all of them
- * `npm test` runs the first three; `npm run test:progress` the last.
+ *   e2e               tests/e2e/: the built site (out-web/) driven in Chromium (harness.js)
+ * `npm test` runs the first three; `npm run test:progress` desktop-progress; `npm run test:e2e` the e2e suite.
  *
  * On 2026-10-16 (Phase 6) desktop-progress passes every test but the three in WEB_LACKS.
- * tests/e2e/ is not run: its harness drives the desktop main process, and is replaced in Phase 12.
  */
 
 /** Desktop tests of what the web version does not have: the command line, and a log file (it logs to the console). */
@@ -21,6 +21,10 @@ const WEB_LACKS = [
   'the command line reads',                                        // balanceViews.test.js
   'render --side back writes the back',                            // cardBacks.test.js
   'names the card, the template, the text elements and the fonts'  // renderContextLog.test.js
+]
+/** End-to-end scenarios of what the web version does not have (WEB-PRD Phase 12). */
+const E2E_WEB_LACKS = [
+  'writes a full file link to a file that exists'    // ttsLinks.e2e: links to files on the computer (a download has none, Phase 7)
 ]
 const withoutLacks = new RegExp(`^(?!.*(?:${WEB_LACKS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')}))`)
 
@@ -62,7 +66,24 @@ export default defineConfig({
         test: { ...shared, name: 'web', include: ['tests/web/**/*.test.js'], setupFiles: ['tests/web/setup.js'] }
       },
       desktopOnWeb('desktop-on-web', { testNamePattern: withoutLacks }),
-      desktopOnWeb('desktop-progress')
+      desktopOnWeb('desktop-progress'),
+      {
+        // the scenarios' own helpers: tests/e2e/seed.js in place of tests/helpers/project.js, the web version's sharp
+        // (on the disk), and Node's native SQLite for better-sqlite3: packages this repository does not have
+        resolve: {
+          alias: [
+            { find: /^\.\.\/helpers\/project\.js$/, replacement: fileURLToPath(new URL('./tests/e2e/seed.js', import.meta.url)) },
+            { find: /^sharp$/, replacement: fileURLToPath(new URL('./src/web/shims/sharp.js', import.meta.url)) },
+            { find: /^better-sqlite3$/, replacement: fileURLToPath(new URL('./tests/e2e/nativeSqlite.js', import.meta.url)) }
+          ]
+        },
+        test: {
+          ...shared, name: 'e2e', setupFiles: ['tests/e2e/setup.js'], include: ['tests/e2e/**/*.e2e.test.js'], globalSetup: ['tests/e2e/global-setup.mjs'],
+          // one file at a time, as the desktop ran them: the scenarios drag on the canvas and time what they see
+          testTimeout: 90000, hookTimeout: 90000, fileParallelism: false, poolOptions: { forks: { singleFork: true } },
+          testNamePattern: new RegExp(`^(?!.*(?:${E2E_WEB_LACKS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')}))`)
+        }
+      }
     ]
   }
 })

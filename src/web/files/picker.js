@@ -44,7 +44,10 @@ export function cancelPick(request) {
 }
 
 export function install() {
-  on('web:pick', request => {
+  on('web:pick', async request => {
+    // the end-to-end tests choose files for the person (tests/e2e/harness.js); nothing sets this in normal use
+    const e2e = globalThis.__SPADEWICK_E2E__
+    if (e2e?.pick) { const files = await e2e.pick(request); if (files !== undefined) { answerPick(request.id, files); return } }
     // still within the click that asked for it: open the picker straight away
     if (navigator.userActivation?.isActive) openPicker(request)
     else pickRequest.set(request)

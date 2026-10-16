@@ -140,7 +140,7 @@ describe('per-card images for a print service', () => {
     await dialog().locator('label:has-text("Resolution (dpi)") input').fill('150')
     await dialog().locator('text=Each image will be 413 × 563').waitFor()
     await dialog().locator('label:has-text("Resolution (dpi)") input').fill('300')
-    await dialog().locator('input.dir-input').first().fill(outDir)
+    app.downloadsTo(outDir)                    // WEB: no output folder to type; the download goes into it
     await dialog().locator('button.primary-btn').click()
     await dialog().locator('.result-box').waitFor()
     const files = readdirSync(outDir).sort()
@@ -163,7 +163,7 @@ describe('per-card images for a print service', () => {
     await dialog().locator('label:has-text("Bleed") input').first().fill('0')
     await dialog().locator('.pre [role=alert]:has-text("There are errors")').waitFor()
     expect(await dialog().locator('.pre [role=status]').innerText()).toMatch(/[1-9]\d* errors?/)
-    await dialog().locator('input.dir-input').first().fill(outDir)
+    app.downloadsTo(outDir)                    // WEB: no output folder to type; the download goes into it
     expect(await dialog().locator('button.primary-btn').isDisabled()).toBe(true)
     expect(await axeViolations(app.page)).toEqual([])
     await dialog().locator('label:has-text("Export anyway") input').check()

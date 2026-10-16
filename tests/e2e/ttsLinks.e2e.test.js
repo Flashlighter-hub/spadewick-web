@@ -32,8 +32,7 @@ const linksSelect = () => app.page.locator('[role=dialog] select[aria-describedb
 
 async function runExport(dirName) {
   const out = join(app.root, dirName); mkdirSync(out, { recursive: true })
-  app.mockDialog.open(out)
-  await app.page.click('[role=dialog] button:has-text("Browse")')
+  app.downloadsTo(out)            // WEB: no folder to browse for; the download (a zip) is unpacked into `out`
   await app.page.locator('[role=dialog] .foot button.primary-btn').click()
   await app.page.waitForSelector('.result-box:has-text("Export complete")', { timeout: 30000 })
   return out
@@ -42,13 +41,14 @@ const faceUrl = out => JSON.parse(readFileSync(join(out, readFileSyncName(out)),
 const readFileSyncName = out => 'test_set.json'
 
 describe('image links in the TTS export dialog (PRD §10.2.1)', () => {
-  it('offers local file paths by default, explains them, and passes axe', async () => {
+  // WEB: a download cannot link to files on the computer: file names are the default, and local paths are not offered
+  it('offers file names by default, explains them, and passes axe', async () => {
     await open()
     await dialogOpen()
-    expect(await linksSelect().inputValue()).toBe('local')
+    expect(await linksSelect().inputValue()).toBe('names')
+    expect(await linksSelect().locator('option[value="local"]').evaluate(o => getComputedStyle(o).display)).toBe('none')
     const text = await app.page.locator('[role=dialog]').innerText()
-    expect(text).toMatch(/Local file paths \(this computer\)/)
-    expect(text).toMatch(/will not load on another computer/)
+    expect(text).toMatch(/The download holds the JSON and the sheet images/)
     expect(text).toMatch(/Saved Objects/)                                   // the loading steps
     expect(await axeViolations(app.page)).toEqual([])
   })

@@ -359,7 +359,8 @@ describe('asset browser (PRD §9)', () => {
     expect((await app.invoke('assets:list', {})).find(a => a.id === dragon.id)).toMatchObject({ width_px: 120, height_px: 90, id: dragon.id })
     const out = join(app.root, 'asset-out'); mkdirSync(out, { recursive: true }); app.mockDialog.open(out)
     await app.page.click('.details button:has-text("Export")')
-    await app.page.waitForFunction(() => document.body.innerText.includes('Exported to'))
+    await app.page.waitForFunction(() => document.body.innerText.includes('Downloaded'))   // WEB: the copy is downloaded
+    await app.settle()
     expect(readdirSync(out)).toEqual(['dragon.png'])
   })
 })
@@ -373,7 +374,7 @@ describe('export dialog: card selection and file names (PRD §10.1)', () => {
     const out = join(app.root, 'sel-out'); mkdirSync(out, { recursive: true })
     await app.menu('menu:export-png')
     await app.page.waitForSelector('[role="dialog"]')
-    app.mockDialog.open(out); await app.page.click('button:has-text("Browse")')
+    app.downloadsTo(out)      // WEB: no folder to browse for; the download goes into `out`
     await app.page.check('text=Matching a filter')
     await app.page.fill('[aria-label="Card filter expression"]', 'cost > 2')
     await app.page.fill('[aria-label="File name pattern"]', 'deck-{{set_name}}')
@@ -391,7 +392,7 @@ describe('export dialog: card selection and file names (PRD §10.1)', () => {
     const out = join(app.root, 'sel-out2'); mkdirSync(out, { recursive: true })
     await app.menu('menu:export-png')
     await app.page.waitForSelector('[role="dialog"]')
-    app.mockDialog.open(out); await app.page.click('button:has-text("Browse")')
+    app.downloadsTo(out)      // WEB: no folder to browse for; the download goes into `out`
     await app.page.check('text=Selected cards (2)')
     await app.page.locator('[role="dialog"] .foot button.primary-btn').click()
     await app.page.waitForSelector('.result-box:has-text("2 card")')

@@ -113,6 +113,7 @@ describe('CSV import with the user\'s own column names (UC-01)', () => {
     await app.page.locator('.dialog .sets input[type=checkbox]').first().waitFor()
     await app.page.click('.dialog button.primary:has-text("Export")')
     await app.page.waitForFunction(() => document.body.innerText.includes('Exported 3 cards'))
+    await app.settle()                                                   // WEB: the file arrives as a download
     expect(existsSync(out)).toBe(true)
   })
 })
@@ -258,12 +259,13 @@ describe('application shell (PRD §12)', () => {
   it('closes, reopens from the recent list, and duplicates a project from the menu', async () => {
     const { dir } = await freshProject('shell')
     await app.menu('menu:close-project')
-    await app.page.waitForSelector('text=Recent Projects')
+    await app.page.waitForSelector('.welcome')                          // WEB: a tab has no list of recent projects
     await app.menu('menu:open-recent', dir)
     await app.page.waitForSelector('.project-name')
     app.answer('Shell Copy'); app.mockDialog.open(app.root)
     await app.menu('menu:duplicate-project')
-    await app.page.waitForFunction(() => document.body.innerText.includes('Duplicated to'))
+    await app.page.waitForFunction(() => document.body.innerText.includes('Downloaded a copy'))   // WEB: the copy is downloaded
+    await app.settle()
     expect(existsSync(join(app.root, 'Shell Copy', 'project.db'))).toBe(true)
   })
 
@@ -275,7 +277,7 @@ describe('application shell (PRD §12)', () => {
 
   it('opens Manage Fonts, and there is no palette to manage (PRD §7.5)', async () => {
     await freshProject('fonts')
-    expect(await app.invoke('palette:list').catch(e => e.message)).toMatch(/No IPC handler/)
+    expect(await app.invoke('palette:list').catch(e => e.message)).toMatch(/No (IPC )?handler/)   // WEB: the core's own words, as Electron's
     await app.menu('menu:manage-fonts')
     await app.page.waitForSelector('[role="dialog"]')
     await app.page.click('[role="dialog"] button:has-text("Done")')

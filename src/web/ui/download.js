@@ -3,6 +3,7 @@
  * saves downloads, or asks where, as the person has set it up.
  */
 export function download(fileName, bytes, type = 'application/octet-stream') {
+  if (globalThis.__SPADEWICK_E2E__) globalThis.__SPADEWICK_E2E__.downloads = (globalThis.__SPADEWICK_E2E__.downloads ?? 0) + 1   // the e2e tests wait for each
   const url = URL.createObjectURL(new Blob([bytes], { type }))
   const a = document.createElement('a')
   a.href = url

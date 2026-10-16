@@ -5,6 +5,7 @@ import { REMEMBERED_SETTINGS, SETTINGS_STORAGE_KEY } from '../config.js'
 
 let worker = null
 let started = false
+const e2eHooks = () => globalThis.__SPADEWICK_E2E__
 const pending = new Map()
 const pongs = new Map()           // ping id -> resolve
 let pingId = 1
@@ -66,8 +67,14 @@ function start() {
   started = false
   worker = new Worker(new URL('../worker/core.worker.js', import.meta.url), { type: 'module', name: 'spadewick-core' })
   const ready = new Promise((resolve, reject) => {
+    // the e2e tests save a download before the answer that follows it is seen (in order; nothing waits in normal use)
+    let inOrder = Promise.resolve()
     worker.onmessage = event => {
       const m = event.data
+      if (e2eHooks()?.download) { inOrder = inOrder.then(() => (m?.type === 'download' ? e2eHooks().download(m) : handle(m))).catch(err => console.error(err)); return }
+      handle(m)
+    }
+    function handle(m) {
       switch (m?.type) {
         case 'result': {
           const p = pending.get(m.id)
@@ -98,7 +105,7 @@ function start() {
     }
   })
   ready.catch(() => { /* reported through 'web:fatal' */ })
-  worker.postMessage({ type: 'init', settings: loadSettings() })
+  worker.postMessage({ type: 'init', settings: loadSettings(), e2e: !!globalThis.__SPADEWICK_E2E__ })
   return ready
 }
 
@@ -135,6 +142,17 @@ export function invoke(channel, ...args) {
     pending.set(id, { resolve, reject, channel })
     try { worker.postMessage({ type: 'invoke', id, channel, args }) } catch (err) { pending.delete(id); reject(err) }
   })
+}
+
+/**
+ * The end-to-end tests (tests/e2e/harness.js) set `__SPADEWICK_E2E__` before the page starts: they then call the core
+ * and send menu events directly, and wait until no call is in flight. Nothing sets it in normal use.
+ */
+const e2e = globalThis.__SPADEWICK_E2E__
+if (e2e) {
+  e2e.invoke = invoke
+  e2e.emit = (...a) => emit(...a)
+  e2e.pending = () => pending.size
 }
 
 /** What the person chose in a picker the worker asked for (Phase 4): [{ path, bytes }], or null when they cancelled. */

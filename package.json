@@ -11,7 +11,8 @@
     "test": "vitest run --project unit --project web --project desktop-on-web",
     "test:watch": "vitest --project unit --project web --project desktop-on-web",
     "docs": "node scripts/docs.mjs",
-    "test:progress": "vitest run --project desktop-progress"
+    "test:progress": "vitest run --project desktop-progress",
+    "test:e2e": "vitest run --project e2e"
   },
   "dependencies": {
     "@jsquash/webp": "^1.5.0",

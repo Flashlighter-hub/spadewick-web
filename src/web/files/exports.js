@@ -44,6 +44,8 @@ export function registerWebExports(dialogs) {
         // a failed or stopped export leaves nothing to download
         if (made) rmSync(made, { recursive: true, force: true })
         throw err
+      } finally {
+        if (made) dialogs.exportDone(made)
       }
     })
   }

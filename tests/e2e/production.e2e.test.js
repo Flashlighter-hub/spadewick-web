@@ -54,7 +54,7 @@ describe('the production export', () => {
     const seeded = await open()
     const outDir = mkdtempSync(join(tmpdir(), 'e2e-prod-'))
     await openProduction()
-    await dialog().locator('input.dir-input').first().fill(outDir)
+    app.downloadsTo(outDir)                    // WEB: no output folder to type; the download goes into it
     await dialog().locator('#prod-ink').fill('250')
     await dialog().locator('select:has(option[value="450"])').selectOption('150')
     await dialog().locator('label:has-text("Crop marks") input').check()

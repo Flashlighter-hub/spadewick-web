@@ -298,12 +298,14 @@ describe('import and export', () => {
     app.mockDialog.open(app.root)
     await app.page.click('button[aria-haspopup=menu]:has-text("Import and export")')
     await app.page.click('[role=menuitem]:has-text("Save all pages as Markdown files")')
-    await app.page.waitForSelector('.toast:has-text("Saved to")')
+    await app.page.waitForSelector('.toast:has-text("Downloaded")')   // WEB: the pages are downloaded (as a zip)
+    await app.settle()
     expect(readFileSync(join(app.root, 'rules', '01-overview.md'), 'utf8')).toBe('# Overview\n\nHello **world**.\n')
     app.mockDialog.save(join(app.root, 'rules.html'))
     await app.page.click('button[aria-haspopup=menu]:has-text("Import and export")')
     await app.page.click('[role=menuitem]:has-text("one web page")')
     await app.page.waitForSelector('.toast:has-text("rules.html")')
+    await app.settle()                                                   // WEB: downloaded
     expect(readFileSync(join(app.root, 'rules.html'), 'utf8')).toContain('<strong>world</strong>')
     // import a folder under the selected page
     const dir = join(app.root, 'more'); mkdirSync(dir, { recursive: true })
