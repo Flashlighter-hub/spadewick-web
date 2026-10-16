@@ -1,6 +1,6 @@
 # Spadewick Web — PRD for the browser-only version
 
-Status: draft 1 · Repository: `Flashlighter-hub/spadewick-web` · Based on: Spadewick 2.0.0-dev.23 (desktop, `Flashlighter-hub/spadewick`)
+Status: draft 2 (owner decisions of §14 applied) · Repository: `Flashlighter-hub/spadewick-web` · Based on: Spadewick 2.0.0-dev.23 (desktop, `Flashlighter-hub/spadewick`)
 
 This document lists everything needed to turn this copy of the Spadewick desktop application into a browser-only
 application hosted for free on Cloudflare Pages. It covers what changes, what is added, what is removed and what must be
@@ -14,9 +14,11 @@ Spadewick Web is the same card-game design tool, running entirely inside a brows
 
 - **No server work.** The site is static files (HTML, JavaScript, WebAssembly, fonts). Cloudflare only serves the program;
   it never receives, stores or sees a project, an image, a font or an export.
-- **No storage on the user's computer.** The application keeps the open project in the tab's memory only. It does not
-  use browser storage (no IndexedDB, no Origin Private File System, no localStorage for project data), does not autosave,
-  and does not write into folders on the disk. Closing or reloading the tab deletes the project permanently.
+- **No project storage on the user's computer.** The application keeps the open project in the tab's memory only. It
+  does not store project data in the browser (no IndexedDB, no Origin Private File System, no localStorage for project
+  data), does not autosave, and does not write into folders on the disk. Closing or reloading the tab deletes the project
+  permanently. The one exception is a small set of **interface preferences** (theme, panel sizes, export options…),
+  remembered in `localStorage` between visits (§5.3); they contain no project content.
 - **Files move only when the user asks.** The only way data reaches the disk is a file the user explicitly downloads
   (*Export project*, a PDF, a PNG sheet, a Tabletop Simulator package…), through the browser's normal download prompt.
   The only way data enters the app is a file the user explicitly picks or drops in.
@@ -33,7 +35,9 @@ Spadewick Web is the same card-game design tool, running entirely inside a brows
 2. A project can be brought in from a file and taken out as a file, and a project exported from the web version opens in
    the desktop version (and the other way round) after unzipping.
 3. Hosting costs nothing: Cloudflare Pages free plan.
-4. No user data leaves the tab except by an explicit user download, and nothing survives closing the tab.
+4. No user data leaves the tab except by an explicit user download, and no project data survives closing the tab
+   (interface preferences do, §5.3).
+5. The site is private: only the owner can open it (§6 Phase 13, Cloudflare Access).
 
 ### Non-goals
 - Accounts, cloud saving, sync, collaboration on the same project.
@@ -123,7 +127,12 @@ with a snapshot, duplicating.
 - **Export project** writes a standard zip whose single top-level folder is the project folder
   (`<Name>/project.db`, `<Name>/assets/…`). Unzipping it gives a folder the desktop app opens with *Open Project*.
 - Excluded from the archive: `.cache/` (undo stash), `exports/` (outputs are downloaded separately), `.spadewick.lock`.
-- Included by default: `snapshots/`. The export dialog has a checkbox *Include snapshots* (they can be large).
+- Included by default: `snapshots/`. The export dialog has a checkbox *Include snapshots* (on by default; snapshots can
+  be large).
+- Included always: the user's **library** (own templates, presets and components, Phase 8) in a second top-level folder
+  `spadewick-library/` next to the project folder. The desktop app ignores it (it is outside the project folder); the
+  web app merges it into the session's library on import (Phase 8). Starter items that ship with the app are not
+  included.
 - File name: `<Name>.spadewick.zip`. **Import project** accepts:
   - a `.zip` (with the project folder at the top, or `project.db` directly at the top),
   - a project folder picked with the folder picker (`webkitdirectory`), for projects made by the desktop app,
@@ -131,19 +140,26 @@ with a snapshot, duplicating.
 - Limits: zip64 is not supported by `src/main/zip.js`, so archives are limited to 4 GB. In practice the tab memory limit
   is lower; the import warns above 500 MB and refuses above 2 GB (both limits configurable in `src/web/config.js`).
 
-### 5.3 What never persists
+### 5.3 What is kept and what is not
 | Desktop location | Web behaviour |
 |---|---|
 | Project folder on disk | MemFS, gone when the tab closes |
 | `projects_root`, recent projects | Removed |
-| electron-store settings (`settings.json`) | In memory (`createMemorySettings`), reset every visit |
-| Template library (`library_dir`), presets, component library | In memory, seeded from the starters that ship with the app; can be exported/imported as files (§9.8) |
+| electron-store settings (`settings.json`) | Interface preferences in `localStorage` (allowlist below); everything else in memory |
+| Template library (`library_dir`), presets, component library | In memory during the session, seeded from the starters; saved **inside every project export** and restored on import (Phase 8) |
 | Logs folder | Browser console only |
 | `.spadewick.lock` | Not needed (one tab = one copy) |
 | Undo stash `.cache/undo` | MemFS, never exported |
 
-**Open question (§14, Q1):** whether UI preferences only (theme, preview size, panel widths, the card ID author code) may
-be kept in `localStorage`. The default in this PRD is **no**: nothing is stored.
+**Interface preferences in `localStorage` (decided, §14 Q1).** Stored under one key, `spadewick.settings`, as JSON, and
+only these settings keys (an allowlist in `src/web/shims/electron-store.js`; any other key stays in memory):
+`theme`, `preview_size`, `ui_layout`, `undo_limit`, `default_export_dpi`, `canvas_smart_guides`, `tts_image_links`,
+`image_export_options`, `production_options`, `author_code` (the card ID author code, so card IDs made in different
+visits stay distinct). Never stored: `projects_root`, `recent_projects`, `library_dir`, and any value containing a
+MemFS path. The renderer already keeps two preferences in `localStorage` itself (`spadewick.rulesMode` in
+`RulesView.svelte`, the table-sharing settings in `lib/shareSettings.js`); they stay as they are.
+*Preferences → Forget my preferences* clears the key. All access is wrapped in `try/catch` (private windows may refuse
+storage; the app then behaves as if nothing was stored).
 
 ### 5.4 Losing work
 Because closing the tab deletes everything:
@@ -231,9 +247,12 @@ Each step lists **Changes** (existing code that is modified), **Additions** (new
   `crypto.randomUUID()`, `createHash('sha1'|'sha256').update(x).digest('hex'|'base64'|…)` synchronous via
   `@noble/hashes`), `zlib.js` (`deflateRawSync`, `inflateRawSync`, `inflateSync` via `fflate`),
   `child_process.js` (`fork` throws, so `safeRaster.js` takes its in-process path; see Phase 5).
-- `src/web/shims/electron-store.js`: re-exports `createMemorySettings` with the desktop defaults from
-  `src/main/index.js` (`undo_limit`, `autosave_interval_seconds`, `preview_size`, `theme`, `default_export_dpi`,
-  `canvas_smart_guides`, `tts_image_links`, `library_dir: '/library'`, `projects_root: '/projects'`).
+- `src/web/shims/electron-store.js`: a settings store with electron-store's shape (`get`, `set`, `store`,
+  `onDidChange`) and the desktop defaults from `src/main/index.js` (`undo_limit`, `autosave_interval_seconds`,
+  `preview_size`, `theme`, `default_export_dpi`, `canvas_smart_guides`, `tts_image_links`, `library_dir: '/library'`,
+  `projects_root: '/projects'`). Allowlisted keys (§5.3) are loaded from and written to `localStorage`. The worker has
+  no `localStorage`, so the main thread owns the store: it sends the saved values to the worker at start-up, and the
+  worker posts every `set` of an allowlisted key back to the main thread, which writes it.
 - `src/web/main.js`: entry point. Imports `bridge.js`, merges `strings.web.js`, mounts the web shell (menu bar,
   drop zone, download handler), then imports `src/renderer/src/main.js`.
 - `src/web/index.html`: the page (title, favicon, `<noscript>` text, CSP meta fallback).
@@ -476,15 +495,27 @@ On the desktop some data lives outside projects, in `library_dir` and the settin
 (`templateLibrary.js`, `core/templatelib.js`), **presets** (`core/presets.js`), the **component library**
 (`core/components.js`), and the **card ID author code** (`cardIds.js setAuthorStore`).
 
-On the web there is no place to keep them between visits, so:
-- They live in MemFS under `/library/` for the session, seeded with the starters that ship with the app
+On the web there is no place on the computer to keep them, so they **travel inside the project archive**
+(decided, §14 Q2):
+- During the session they live in MemFS under `/library/`, seeded with the starters that ship with the app
   (`templateStarters.js`, `presets/shipped.js`, `componentStarters.js`) — unchanged code.
-- Each library dialog gets **Export library…** / **Import library…** (one zip of `/library/<kind>/`), so a user can
-  carry their own templates, presets and components between visits. The existing per-item export/import
-  (template packages, `.spadecomponent.json`, preset `.json`) keeps working.
-- **Open question (§14, Q2):** bundle the user's library inside the project archive automatically (simplest for
-  users, makes archives larger) — default **no**.
-- The card ID author code is asked for once per session (or read from the project if the project stores it).
+- **Export project** adds the user's own items (not the starters) under `spadewick-library/` in the zip
+  (`templates/`, `presets/`, `components/`, same file layout as `library_dir` on the desktop).
+- **Import project** merges `spadewick-library/` into `/library/`:
+  - an item that is not in the session is added;
+  - an item with the same id and the same content is skipped;
+  - an item with the same id and different content: the more recently modified one is kept, and the other is kept as a
+    copy named "<name> (from <project>)", so nothing is lost silently;
+  - a short summary toast says what was added.
+- Opening a second project in the same session keeps the library from the first (it is the session's library), so the
+  next export carries both.
+- A library can also be used with no project open: *Export library…* / *Import library…* in the library dialogs
+  (one zip of `spadewick-library/`). The existing per-item export/import (template packages, `.spadecomponent.json`,
+  preset `.json`) keeps working.
+- The card ID author code is remembered in `localStorage` (§5.3).
+- **Fix:** `templateLibrary.js` and `core/templatelib.js` record the library item a project template came from
+  ("origin status"). Item ids must be stable across export/import for this to keep working — the archive keeps the
+  original ids; only renamed copies (conflict case above) get new ones, and their origin links point to the copy.
 
 ### Phase 9 — User interface
 
@@ -507,7 +538,7 @@ On the web there is no place to keep them between visits, so:
   the drop zone, and the privacy note (§5.4). The `.path` display is removed.
 - **Sidebar** (`Sidebar.svelte:157`): the project-name tooltip shows the name, not a MemFS path.
 - **Preferences** (`PreferencesDialog.svelte`): remove *Projects folder* and *Autosave interval*; keep theme, preview
-  size, undo limit, export DPI, smart guides, TTS link mode (without `local`).
+  size, undo limit, export DPI, smart guides, TTS link mode (without `local`); add *Forget my preferences* (§5.3).
 - **Status bar** (`StatusBar.svelte` / `App.svelte autosave`): export status instead of autosave status (§5.4).
 - **About** dialog: version, "runs entirely in your browser", licences link (`THIRD-PARTY-NOTICES.md` served as a page).
 - **Loading screen** while the WASM modules and default fonts load (first visit ≈ 8–10 MB).
@@ -573,6 +604,31 @@ grid, JPEG writer…), which do not touch native modules.
   (`connect-src 'self'` blocks any accidental upload to another site; WebRTC is not governed by CSP. If `wasm-vips` is
   adopted, add `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.)
 - No `functions/` folder: no server code at all.
+
+**Private site: only the owner can open it (decided, §14 Q4)**
+- Hosted on the free `<project>.pages.dev` address, protected by **Cloudflare Access** (Cloudflare Zero Trust, free plan,
+  up to 50 users). Visitors see a Cloudflare sign-in page; only the owner's email address is allowed, signing in with a
+  one-time code sent to that address. Everyone else is refused before any file of the app is served.
+- Setup (Cloudflare dashboard, once):
+  1. Create the Zero Trust organisation (Zero Trust → choose a team name, select the Free plan; Cloudflare may ask for a
+     payment method even on the free plan).
+  2. Workers & Pages → the project → Settings → General → **Enable access policy**. This creates an Access application
+     for the preview deployments (`*.<project>.pages.dev`).
+  3. Select **Manage** on that policy → Access → Applications → the application → **Configure**. Under *Public hostname*,
+     delete the `*` wildcard in *Subdomain* so it covers the production address `<project>.pages.dev`; rename the
+     application if asked; save.
+  4. Back in the project's Settings → General, select **Enable access policy** again, so previews are protected too.
+     Check that Access → Applications lists two applications: `<project>.pages.dev` and `*.<project>.pages.dev`.
+  5. In each application's policy: action *Allow*, include rule *Emails* = the owner's email address. Login method:
+     *One-time PIN*. Session duration: 24 hours (or as preferred).
+  6. Test in a private window: the app must show the Cloudflare sign-in, and a different email must be refused.
+- Access sets a `CF_Authorization` cookie on the site after sign-in. It is Cloudflare's sign-in token, not app data, and
+  is the only cookie involved (acceptance criterion 3 accounts for it).
+- `public/_headers` does not change for Access (Access runs before the site is served). The CSP `connect-src 'self'`
+  still allows the app's own requests, which carry the Access cookie automatically.
+- No custom domain. If one is added later, it needs its own self-hosted Access application, otherwise visitors on
+  that domain get a sign-in page that does not work.
+- The GitHub repository stays private; Cloudflare's Git integration works with private repositories.
 - `wrangler.toml` (optional, for command-line deploys): `pages_build_output_dir = "out-web"`.
 
 **Cloudflare Pages settings** (Git integration with this repository)
@@ -583,7 +639,7 @@ grid, JPEG writer…), which do not touch native modules.
   - 25 MiB per file — largest file ≈ 4.6 MB (Merriweather); the WASM files are 1–3 MB each.
   - 500 deploys per month; unlimited static requests and bandwidth.
   - Drag-and-drop upload is limited to 1,000 files — not used (Git integration).
-- Preview deployments for pull requests come free with Git integration.
+- Preview deployments for pull requests come free with Git integration (protected by Access, step 4 above).
 
 **Size budget:** first load ≤ 10 MB compressed (app ≈ 2 MB, SQLite ≈ 0.9 MB, resvg ≈ 2.5 MB, HarfBuzz ≈ 0.6 MB, lcms
 ≈ 0.5 MB, default fonts ≈ 3 MB); other fonts and the ICC profile on demand.
@@ -647,8 +703,10 @@ prefer aliasing the component to a `src/web/ui/` copy over editing it, if the ed
 5. TTS "local file" links are not available; use "file names" or Steam Cloud links.
 6. Very large PNG sheets may need splitting on Safari.
 7. Exports of hundreds of cards are slower than on the desktop (WASM vs native; target ≤ 2× the desktop time).
-8. Template library, presets and components the user creates must be exported to be kept.
+8. The user's own templates, presets and components are kept by exporting a project (they travel inside every
+   project archive) or with *Export library…*.
 9. New Project is `Alt+N` (browser reserves `Ctrl+N`).
+10. The site asks the owner to sign in with a one-time email code (Cloudflare Access).
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -666,13 +724,17 @@ prefer aliasing the component to a `src/web/ui/` copy over editing it, if the ed
 1. `npm run build` produces `out-web/`; deploying it to Cloudflare Pages (free plan) serves a working app over HTTPS.
 2. With the browser's network panel open, a full session (import, edit, export of each kind) makes **no requests**
    other than GETs of the site's own static files (and STUN only when sharing a table).
-3. After closing and reopening the tab, no project data is present; DevTools → Application shows no IndexedDB, OPFS,
-   localStorage or cookies created by the app.
+3. After closing and reopening the tab, no project data is present; DevTools → Application shows no IndexedDB or OPFS
+   data, `localStorage` holds only `spadewick.settings` (allowlisted keys), `spadewick.rulesMode` and the
+   table-sharing settings, and the only cookie is Cloudflare Access's `CF_Authorization`.
 4. A project exported by the desktop app (zipped folder) imports and renders identically (pixel tolerance) to the
    desktop; a project exported by the web app opens in the desktop app after unzipping.
 5. Every feature listed in §2 goal 1 works in current Chrome, Edge and Firefox; the e2e suite passes in Chromium.
 6. Exports of the fixture project (TTS, PnP PDF, PNG sheet, production PDF) match desktop output within tolerance.
 7. Lighthouse: no console errors on load; first load ≤ 10 MB compressed.
+8. Opening the site in a private window without signing in shows the Cloudflare Access page and no part of the app;
+   signing in with any email other than the owner's is refused.
+9. Exporting a project and importing it in a fresh tab restores the user's own templates, presets and components.
 
 ## 12. Performance targets
 - First load (cold cache, 50 Mbit/s): interactive in ≤ 5 s; repeat visits ≤ 2 s (HTTP cache).
@@ -685,12 +747,11 @@ prefer aliasing the component to a `src/web/ui/` copy over editing it, if the ed
   v1 deliberately avoids).
 - Touch/tablet layout.
 
-## 14. Open questions
-- **Q1.** May UI preferences (theme, panel sizes, author code) be kept in `localStorage`? Default in this PRD: no.
-- **Q2.** Should the user's template/preset/component library travel inside the project archive automatically?
-  Default: no; separate export.
-- **Q3.** Should snapshots be included in project exports by default? Default: yes, with a checkbox.
-- **Q4.** Domain: `*.pages.dev` or a custom domain (free on Cloudflare if the domain is already owned).
+## 14. Decisions (answered by the owner)
+- **Q1. Keep interface preferences between visits?** Yes — in `localStorage`, allowlisted keys only (§5.3).
+- **Q2. Carry the user's library inside project archives?** Yes — automatically, merged on import (§5.2, Phase 8).
+- **Q3. Include snapshots in project exports?** Yes by default, with a checkbox to leave them out (§5.2).
+- **Q4. Hosting?** Free `*.pages.dev` address, private to the owner through Cloudflare Access (Phase 13).
 
 ## 15. Suggested order of work
 1. Phase 0, Phase 1 (worker + shims + unchanged preload) and Phase 2 (database): the app starts, a new project can be
