@@ -50,7 +50,7 @@ function freeFolder(name) {
 }
 
 /** The project's name as its database says, or null. */
-function nameInDatabase(dbFile) {
+export function nameInDatabase(dbFile) {
   let db
   try {
     db = new Database(dbFile, { readonly: true })

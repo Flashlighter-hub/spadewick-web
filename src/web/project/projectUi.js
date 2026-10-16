@@ -52,22 +52,24 @@ export function finishImport(path) {
 const readBytes = file => file.arrayBuffer().then(b => new Uint8Array(b))
 
 /**
- * Bring in what the person chose: one .zip or project.db file, or the files of a folder (from a folder picker, each
- * with its webkitRelativePath). Resolves to { path, name } or throws an error whose message can be shown.
+ * Bring in what the person chose: one .zip or project.db file, or the files of a folder — from a folder picker (each
+ * File with its webkitRelativePath) or dropped ([{ file, path }]). Resolves to { path, name } or throws an error whose
+ * message can be shown.
  */
 export async function bringIn(fileList) {
-  const files = [...fileList]
-  if (!files.length) return null
+  const items = [...fileList].map(f => (f instanceof File ? { file: f, path: f.webkitRelativePath || f.name } : f))
+  if (!items.length) return null
+  const files = items.map(i => i.file)
   const total = files.reduce((n, f) => n + f.size, 0)
   if (total > MAX_PROJECT_BYTES) throw new Error(tr('web.project.tooBig'))
   if (total > WARN_PROJECT_BYTES && !await askConfirm(tr('web.project.large', { size: Math.round(total / 1048576) }))) return null
 
   let payload
-  const asFolder = files.length > 1 || files[0].webkitRelativePath
+  const asFolder = items.length > 1 || items[0].path.includes('/')
   if (asFolder) {
-    payload = { kind: 'files', files: await Promise.all(files.map(async f => ({ path: f.webkitRelativePath || f.name, bytes: await readBytes(f) }))) }
+    payload = { kind: 'files', files: await Promise.all(items.map(async i => ({ path: i.path, bytes: await readBytes(i.file) }))) }
   } else {
-    const [file] = files
+    const [{ file }] = items
     payload = { kind: /\.db$/i.test(file.name) ? 'db' : 'zip', name: file.name, bytes: await readBytes(file) }
   }
   try { return await invoke('web:project-import', payload) } catch (err) { throw new Error(messageOf(err)) }

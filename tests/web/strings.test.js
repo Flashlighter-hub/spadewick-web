@@ -19,12 +19,12 @@ describe('web text', () => {
 
   it('every key used in src/web exists', () => {
     expect(uses.length).toBeGreaterThan(20)
-    expect(uses.filter(u => typeof lookup(u.key) !== 'string').map(u => `${u.f}: ${u.key}`)).toEqual([])
+    expect(uses.filter(u => !['string', 'function'].includes(typeof lookup(u.key))).map(u => `${u.f}: ${u.key}`)).toEqual([])   // functions make plurals
   })
 
   it('every {placeholder} of a web text is given', () => {
     const missing = []
-    for (const u of uses.filter(u => u.key.startsWith('web.'))) {
+    for (const u of uses.filter(u => u.key.startsWith('web.') && typeof lookup(u.key) === 'string')) {
       for (const [, name] of String(lookup(u.key)).matchAll(/\{(\w+)\}/g)) if (!new RegExp(`\\b${name}\\b`).test(u.params)) missing.push(`${u.key} needs {${name}}`)
     }
     expect(missing).toEqual([])

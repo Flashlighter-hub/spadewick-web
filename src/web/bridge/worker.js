@@ -54,6 +54,8 @@ export const whenReady = new Promise((resolve, reject) => {
       case 'open-external': window.open(m.url, '_blank', 'noopener,noreferrer'); return
       case 'notice': emit('web:notice', m); return
       case 'project-state': emit('web:project-state', m.state); return
+      case 'pick': emit('web:pick', m); return
+      case 'download': emit('web:download', m); return
       case 'ready': resolve(m.channels); return
       case 'fatal': failed = m.error; reject(new Error(m.error.message)); emit('web:fatal', m.error); return
     }
@@ -78,6 +80,12 @@ export function invoke(channel, ...args) {
     pending.set(id, { resolve, reject, channel })
     try { worker.postMessage({ type: 'invoke', id, channel, args }) } catch (err) { pending.delete(id); reject(err) }
   })
+}
+
+/** What the person chose in a picker the worker asked for (Phase 4): [{ path, bytes }], or null when they cancelled. */
+export function answerPick(id, files) {
+  const transfer = (files ?? []).map(f => f.bytes.buffer).filter((b, i, all) => all.indexOf(b) === i)
+  worker.postMessage({ type: 'picked', id, files }, transfer)
 }
 
 /** Listen to an event from the core or from the web interface (menu:* channels, project:changed, web:*). */

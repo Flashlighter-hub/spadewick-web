@@ -49,6 +49,23 @@ export const webStrings = {
       privacy: 'The project is read in this tab and never uploaded.',
       desktopHint: 'A project from the desktop app: close it there first, then choose its folder or a zip of it.'
     },
+    // file pickers and drops (WEB-PRD Phase 4)
+    pick: {
+      title: 'Choose a file',
+      folderTitle: 'Choose a folder',
+      text: 'Choose the file on your computer.',
+      filesText: 'Choose the files on your computer.',
+      folderText: 'Choose the folder on your computer.',
+      siblings: 'Choose the other pictures of the design with it, if they are in the same folder: they are found too.',
+      privacy: 'What you choose is read in this tab and never uploaded.',
+      choose: 'Choose…',
+      chooseFolder: 'Choose a folder…'
+    },
+    drop: {
+      openFirst: 'Open or create a project first, then drop the pictures on it.',
+      added: ({ n }) => `Added ${n} ${n === 1 ? 'picture' : 'pictures'} to the project's assets.`,
+      unknown: 'Drop a project (.spadewick.zip, a project folder or project.db) or pictures (PNG, JPEG, WebP, SVG).'
+    },
     export: {
       title: 'Export the project',
       intro: 'Download “{name}” as one .spadewick.zip file. Import it here to go on working, or unzip it and open the folder in the desktop app.',
@@ -63,6 +80,12 @@ export const webStrings = {
   // desktop text that says something else in the web version
   welcome: {
     openProject: 'Import Project…'
+  },
+  menu: {
+    duplicateProject: 'Export a Copy As…'
+  },
+  actions: {
+    duplicated: 'Downloaded a copy: {path}'
   }
 }
 

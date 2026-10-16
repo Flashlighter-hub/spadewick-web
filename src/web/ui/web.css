@@ -3,3 +3,6 @@
 #app { position: fixed; top: var(--web-bar-height); left: 0; right: 0; bottom: 0; }
 /* the desktop interface fills the window; here it fills what the bar leaves */
 #app .app-shell { height: 100% !important; }
+
+/* a file is being dragged over the page (files/dropZone.js) */
+body.web-dropping #app { outline: 3px dashed var(--color-accent); outline-offset: -6px; }

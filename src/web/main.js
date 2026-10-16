@@ -20,6 +20,8 @@ if (missing.length) {
   await import('./ui/web.css')
   const projectUi = await import('./project/projectUi.js')
   projectUi.install()
+  ;(await import('./files/picker.js')).install()
+  ;(await import('./files/dropZone.js')).install()
   const { on } = await import('./bridge/worker.js')
   const { toast } = await import('../renderer/src/stores/ui.js')
 
