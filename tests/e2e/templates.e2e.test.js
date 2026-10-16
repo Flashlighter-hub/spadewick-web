@@ -39,7 +39,8 @@ describe('there is one place for templates: the Template Editor', () => {
   it('opens the library from the editor, showing only templates of the set\'s card size', async () => {
     await freshProject()
     await openLibrary()
-    expect(await dialog().innerText()).toMatch(/Showing templates for the active set's card size: Poker/)
+    // WEB: the set's card size arrives from the core a moment after the dialog opens
+    await expect.poll(() => dialog().innerText(), { timeout: 8000 }).toMatch(/Showing templates for the active set's card size: Poker/)
     await app.page.waitForSelector('.entry.tile')
     // Poker: the blank frame, the poker-size examples and the poker card backs; tarot and the other sizes are not offered
     const names = await dialog().locator('.entry.tile h4').allInnerTexts()
@@ -75,7 +76,7 @@ describe('there is one place for templates: the Template Editor', () => {
     await app.page.click('button:has-text("New Set from Template")')
     await dialog().waitFor()
     expect(await dialog().innerText()).toMatch(/Showing templates of every card size/)
-    expect(await dialog().locator('.entry.tile').count()).toBeGreaterThan(14)        // 12 blank frames + 3 examples
+    await expect.poll(() => dialog().locator('.entry.tile').count()).toBeGreaterThan(14)   // 12 blank frames + 3 examples (WEB: they arrive a moment later)
     await tile('Tarot card with collector number').locator('button.primary').click()
     await dialog().locator('input.inline').fill('Major Arcana')
     await app.page.waitForFunction(() => !document.querySelector('[role=dialog] button.primary')?.disabled)
@@ -172,7 +173,7 @@ describe('the actions of one template (the Template menu in the editor)', () => 
     app.mockDialog.save(file)
     await tile('My poker frame').getByRole('button', { name: 'Export My poker frame as a package' }).click()
     await dialog().locator('button.primary', { hasText: 'Export…' }).click()
-    await app.page.waitForSelector('.toast:has-text("Package saved")')
+    await app.page.waitForSelector('.toast:has-text("Downloaded")')        // WEB: the package is downloaded
     await dialog().locator('button', { hasText: 'Done' }).last().click()
 
     // reset: edit the copy, then put the library version back

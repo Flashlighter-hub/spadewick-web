@@ -28,7 +28,8 @@ async function openEditor() {
   await app.page.waitForSelector('.zoombar')
 }
 const host = () => app.page.locator('.stage-host').evaluate(n => { const r = n.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })
-const scrollTo = (l, t) => app.page.locator('.scroller').evaluate((n, [l, t]) => { n.scrollLeft = l; n.scrollTop = t }, [l, t])
+// WEB: the stage follows the scroll a frame or two later than on the desktop
+const scrollTo = (l, t) => app.page.locator('.scroller').evaluate((n, [l, t]) => { n.scrollLeft = l; n.scrollTop = t; return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50)))) }, [l, t])
 const clickCard = async (x, y) => { const h = await host(); await app.page.mouse.click(h.x + x, h.y + y) }
 const title = () => app.page.locator('.props-title').innerText()
 const field = label => app.page.locator(`label:has-text("${label}") input`).first()
@@ -43,6 +44,7 @@ describe('elements that spill over the edge of the card', () => {
   beforeEach(openEditor)
 
   it('can be seen outside the card, dimmed, in the picture', async () => {
+    await scrollTo(0, 0)          // WEB: the card opens centred with less of the pasteboard above it than the probe needs
     await expect.poll(async () => app.page.evaluate(() => {
       const c = document.querySelectorAll('.stage-view canvas')[0], r = window.devicePixelRatio || 1
       const hb = document.querySelector('.stage-host').getBoundingClientRect(), cb = c.getBoundingClientRect()
@@ -77,7 +79,7 @@ describe('elements that spill over the edge of the card', () => {
 
   it('can be selected when it lies wholly outside the card, and dragged back onto it', async () => {
     const h = await host()
-    await app.page.locator('.scroller').evaluate(n => { n.scrollLeft = n.scrollWidth })     // to the right of the card
+    await app.page.locator('.scroller').evaluate(n => { n.scrollLeft = n.scrollWidth; return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 50)))) })     // to the right of the card (WEB: and the stage has followed)
     const r = await host()
     await app.page.mouse.click(r.x + 560, r.y + 340)                    // inside the blue rectangle, which is 20 units right of the card
     await expect.poll(title).toMatch(/rect · away/)

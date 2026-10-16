@@ -102,7 +102,7 @@ describe('using a component from the library', () => {
     await dialog().waitFor()
     expect(await axeViolations(app.page)).toEqual([])
     const tile = dialog().locator('.tile', { hasText: 'Cost badge' })
-    expect(await tile.locator('img').count()).toBe(1)
+    await expect.poll(() => tile.locator('img').count()).toBe(1)       // WEB: the picture is drawn a moment after the list
     expect(await tile.locator('.warn').innerText()).toContain('rank')               // this set has no "rank" field
     await tile.locator('button:has-text("Insert")').click()
     await app.page.waitForSelector('.props .comp')

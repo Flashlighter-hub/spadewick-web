@@ -154,3 +154,23 @@ describe('the page is told', () => {
     expect(await call('projects:autosave')).toBeNull()
   })
 })
+
+describe('a damaged project (PRD §14.2)', () => {
+  it('opens to offer its latest snapshot instead of failing, and is itself again after the restore', async () => {
+    const { handlerOf } = await import('../../src/web/shims/electron.js')
+    const call = (c, ...a) => handlerOf(c)({ sender: null }, ...a)
+    const { writeFileSync } = await import('fs')
+    await call('projects:create', { name: 'Damaged', parentDir: '/tmp' })   // outside /projects: closing it keeps its folder
+    await call('sets:create', { name: 'Base' })
+    await call('snapshots:create', { name: 'known good' })
+    const { path } = await call('projects:get-meta')
+    await call('projects:close')
+    writeFileSync(`${path}/project.db`, new Uint8Array(4096).fill(9))
+    const state = await call('projects:open', path)
+    expect(state.corrupt).toBe(true)
+    const [latest] = await call('snapshots:list')
+    await call('snapshots:restore', latest.id)
+    expect((await call('sets:list')).map(s => s.name)).toEqual(['Base'])
+    expect((await call('web:project-state')).name).toBe('Damaged')
+  })
+})

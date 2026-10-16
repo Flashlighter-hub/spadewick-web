@@ -10,8 +10,16 @@
 >   in-memory file system; `tests/web/child_process.js` lets them run pdftoppm and unzip on what the app wrote.
 > - **desktop-progress** — the same, including those three, with `npm run test:progress`.
 >
-> `npm test` runs the first three. `tests/e2e/` is not run: its harness drives the desktop main process and is replaced
-> in Phase 12 by one that drives the built site. The rest of this file describes the desktop setup these tests come from.
+> - **e2e** — `tests/e2e/`, with `npm run test:e2e`: the built site (`out-web/`) driven in Chromium, one file at a time.
+>   `harness.js` keeps the desktop harness's interface, so the desktop's scenarios run with few changes (marked `WEB:`):
+>   calls go through the page's bridge; the test's folder is mirrored into the tab's memory at the same path (its files
+>   go in before each call, what the core wrote comes back after); file pickers are answered from `mockDialog.open`;
+>   downloads land where the scenario expects (`mockDialog.save`, an `outputDir`, `downloadsTo`); and `goto()` or a
+>   reload keeps the open project, as the desktop's window reload did. The scenarios' helpers come from `seed.js`, with
+>   the web version's sharp and Node's own SQLite (`nativeSqlite.js`). `webFlows.e2e.test.js` covers what only the web
+>   version does; `E2E_WEB_LACKS` in `vitest.config.mjs` names the scenarios of what it does not have.
+>
+> `npm test` runs the first three. The rest of this file describes the desktop setup these tests come from.
 
 Everything runs headless with `npm run test:all` (also run by CI on every push, see
 `.github/workflows/test.yml`).

@@ -28,4 +28,15 @@ if (typeof globalThis.process === 'undefined') {
   }
 }
 
+// setImmediate: the core lets waiting messages through during long checks (preflight, text check). A message to
+// itself runs after them, without the 4 ms a nested setTimeout would wait.
+if (typeof globalThis.setImmediate !== 'function') {
+  const waiting = new Map()
+  let next = 1
+  const channel = new MessageChannel()
+  channel.port1.onmessage = ({ data: id }) => { const run = waiting.get(id); waiting.delete(id); run?.() }
+  globalThis.setImmediate = (fn, ...args) => { const id = next++; waiting.set(id, () => fn(...args)); channel.port2.postMessage(id); return id }
+  globalThis.clearImmediate = id => { waiting.delete(id) }
+}
+
 for (const folder of FOLDERS) mkdirp(folder)

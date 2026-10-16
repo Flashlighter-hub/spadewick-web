@@ -77,9 +77,11 @@ export async function startApp() {
     save: path => outQueue.push({ path, kind: 'file' }),
     reset: () => { openQueue.length = 0; outQueue.length = 0 }
   }
-  await context.exposeFunction('__e2ePick', request => {
+  await context.exposeFunction('__e2ePick', async request => {
     const paths = openQueue.shift()
+    if (process.env.E2E_DEBUG) console.error('[e2e pick]', JSON.stringify(request), JSON.stringify(paths), JSON.stringify(openQueue))
     if (!paths) return null                                  // nothing chosen: the dialog was cancelled
+    if (paths.some(p => !existsSync(p))) await pull()        // a file the core wrote (with raw) is chosen: copy it out first
     return paths.flatMap(pickedFiles)
   })
   // the desktop harness's window.__emitMenu: the test's files go in first, as for a call
@@ -140,7 +142,7 @@ export async function startApp() {
     else if (declineConfirms > 0) { declineConfirms--; await d.dismiss() }
     else await d.accept()
   })
-  await context.exposeFunction('__nextAnswer', () => (answers.length ? String(answers.shift()) : null))
+  await context.exposeFunction('__nextAnswer', () => { const a = answers.length ? String(answers.shift()) : null; if (process.env.E2E_DEBUG) console.error('[e2e answer]', a, JSON.stringify(answers)); return a })
   await context.exposeFunction('__confirmAnswer', message => {
     dialogs.push({ type: 'confirm', message })
     if (hold.confirms) return null
@@ -187,9 +189,13 @@ export async function startApp() {
   const fromCore = new Set()    // files the core wrote (copied to the disk)
   const coreTimes = new Map()   // path -> the time the core's copy had when it was last copied
   let loaded = false
+  const ready = () => page.waitForFunction(() => window.spadewick && window.__SPADEWICK_E2E__?.invoke && !document.getElementById('web-loading'), null, { timeout: 60000 })
+  // the desktop harness kept the library in the test's folder: here too, so it is mirrored and outlives a reload
+  const useTestLibrary = () => page.evaluate(dir => window.__SPADEWICK_E2E__.invoke('settings:set', 'library_dir', dir), join(root, 'library').split(sep).join('/'))
   async function load() {
     await page.goto(url)
-    await page.waitForFunction(() => window.spadewick && window.__SPADEWICK_E2E__?.invoke && !document.getElementById('web-loading'), null, { timeout: 60000 })
+    await ready()
+    await useTestLibrary()
     loaded = true
   }
   // the desktop's core outlived its window; here it lives in the page, so the page is loaded before the first call
@@ -334,7 +340,8 @@ export async function startApp() {
       await pull()
       const open = await coreCall('projects:get-meta', []).catch(() => null)
       await hardReload()
-      await page.waitForFunction(() => window.spadewick && window.__SPADEWICK_E2E__?.invoke && !document.getElementById('web-loading'), null, { timeout: 60000 })
+      await ready()
+      await useTestLibrary()
       known.clear(); fromCore.clear(); coreTimes.clear()
       await push()
       if (open?.path) {

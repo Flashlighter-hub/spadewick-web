@@ -177,8 +177,9 @@ describe('template editor and canvas', () => {
     const box = await app.page.locator('.stage-host').boundingBox()
     await app.page.mouse.click(box.x + 100, box.y + 150)       // select the "frame" rectangle
     await app.page.waitForSelector('.props-title:has-text("frame")')
-    await app.page.mouse.move(box.x + 100, box.y + 150); await app.page.mouse.down()
-    await app.page.mouse.move(box.x + 160, box.y + 190, { steps: 6 }); await app.page.mouse.up()
+    // WEB: Alt pauses snapping; the card's title is drawn with the web version's default font, whose edge is within snapping reach
+    await app.page.mouse.move(box.x + 100, box.y + 150); await app.page.keyboard.down('Alt'); await app.page.mouse.down()
+    await app.page.mouse.move(box.x + 160, box.y + 190, { steps: 6 }); await app.page.mouse.up(); await app.page.keyboard.up('Alt')
     await app.page.click('button:has-text("Save")')
     await app.page.waitForFunction(() => !document.querySelector('button.dirty'))
     const saved = (await app.invoke('templates:get', template.id)).svg_source
@@ -194,8 +195,9 @@ describe('template editor and canvas', () => {
     await app.page.waitForSelector('.template-editor canvas')
     const box = await app.page.locator('.stage-host').boundingBox()
     await app.page.mouse.click(box.x + 100, box.y + 150)
-    await app.page.mouse.move(box.x + 100, box.y + 150); await app.page.mouse.down()
-    await app.page.mouse.move(box.x + 160, box.y + 190, { steps: 4 }); await app.page.mouse.up()
+    // WEB: Alt pauses snapping (see above)
+    await app.page.mouse.move(box.x + 100, box.y + 150); await app.page.keyboard.down('Alt'); await app.page.mouse.down()
+    await app.page.mouse.move(box.x + 160, box.y + 190, { steps: 4 }); await app.page.mouse.up(); await app.page.keyboard.up('Alt')
     expect(await sourceText()).toMatch(/x="100"/)
     await app.menu('menu:undo')
     await expect.poll(sourceText, { timeout: 5000 }).toMatch(/data-spadewick-id="frame" x="40"/)
@@ -260,6 +262,7 @@ describe('application shell (PRD §12)', () => {
     const { dir } = await freshProject('shell')
     await app.menu('menu:close-project')
     await app.page.waitForSelector('.welcome')                          // WEB: a tab has no list of recent projects
+    await app.settle()                                                   // WEB: the close has finished before the project opens again
     await app.menu('menu:open-recent', dir)
     await app.page.waitForSelector('.project-name')
     app.answer('Shell Copy'); app.mockDialog.open(app.root)

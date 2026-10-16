@@ -215,8 +215,9 @@ export function registerWebProject(post) {
     }
   }
 
-  async function refreshCurrent({ fresh }) {
-    const state = await meta()
+  async function refreshCurrent({ fresh, opened = null }) {
+    // a damaged project is opened only to offer a snapshot (PRD §14.2): its database cannot be read for the details
+    const state = opened?.corrupt ? opened : await meta()
     current = state ? { path: state.path, name: state.meta?.name ?? basename(state.path) } : null
     prune(current?.path)
     if (fresh) {
@@ -245,13 +246,15 @@ export function registerWebProject(post) {
       const r = await fn(event, ...args)
       if (r) {
         const path = r.path ?? null
-        await refreshCurrent({ fresh: path && imported.has(normalize(path)) ? 'imported' : 'created' })
+        await refreshCurrent({ fresh: path && imported.has(normalize(path)) ? 'imported' : 'created', opened: r })
         if (path) imported.delete(normalize(path))
       }
       return r
     })
   }
   wrapHandler('projects:close', fn => async (...args) => { const r = await fn(...args); await refreshCurrent({ fresh: null }); return r })
+  // a damaged project brought back from a snapshot has its own details again
+  wrapHandler('snapshots:restore', fn => async (...args) => { const r = await fn(...args); await refreshCurrent({ fresh: null }).catch(() => {}); return r })
   // the desktop keeps a list of recent folders; a tab has only the project it holds
   wrapHandler('projects:list-recent', () => async () => [])
   // autosave on the desktop folds the database's log into its file; there is nothing to save to here (WEB-PRD §5.4)
